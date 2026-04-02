@@ -7,7 +7,7 @@ import {
   Star, Award, Shield, FileCheck, Users, ChevronRight,
   Gavel, Palette, Image as ImageIcon, Clock, ArrowRight,
   CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronUp,
-  Zap, Terminal
+  Zap, Terminal, UserPlus, LogOut, User, DollarSign
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,25 +40,70 @@ const artworks = [
 ]
 
 type ViewId = 'gallery' | 'reviews' | 'provenance' | 'certificates' | 'collectors'
+type AuthModalTab = 'login' | 'signup'
+type LoggedInUser = { id: string; username: string; role: string; email: string }
 
 // ============ MAIN APP ============
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewId>('gallery')
-  const [loginOpen, setLoginOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authTab, setAuthTab] = useState<AuthModalTab>('login')
+  const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null)
+  const [pendingBid, setPendingBid] = useState<typeof artworks[0] | null>(null)
   const [bidArtwork, setBidArtwork] = useState<typeof artworks[0] | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResultsHtml, setSearchResultsHtml] = useState('')
   const [searching, setSearching] = useState(false)
+  const [bidAmount, setBidAmount] = useState('')
+  const [bidPlaced, setBidPlaced] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/seed', { method: 'POST' }).catch(() => {})
   }, [])
 
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   const handlePlaceBid = (artwork: typeof artworks[0]) => {
-    setBidArtwork(artwork)
-    setLoginOpen(true)
+    if (!currentUser) {
+      setPendingBid(artwork)
+      setAuthTab('login')
+      setAuthOpen(true)
+    } else {
+      setBidArtwork(artwork)
+      setBidAmount('')
+      setBidPlaced(false)
+    }
+  }
+
+  const handleAuthSuccess = (user: LoggedInUser) => {
+    setCurrentUser(user)
+    setAuthOpen(false)
+    // If there was a pending bid, open the bid form now
+    if (pendingBid) {
+      setBidArtwork(pendingBid)
+      setBidAmount('')
+      setBidPlaced(false)
+      setPendingBid(null)
+    }
+  }
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    setBidArtwork(null)
+    setUserMenuOpen(false)
   }
 
   const handleSearch = async () => {
@@ -84,6 +129,14 @@ export default function Home() {
     { id: 'certificates', label: 'Certificates', icon: <Award className="w-4 h-4" /> },
     { id: 'collectors', label: 'Collectors', icon: <Users className="w-4 h-4" /> },
   ]
+
+  const roleBadgeColor: Record<string, string> = {
+    admin: 'bg-red-500/20 text-red-400 border-red-500/30',
+    manager: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    dbadmin: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    auditor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    user: 'bg-[#c9a96e]/20 text-[#c9a96e] border-[#c9a96e]/30',
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -131,15 +184,73 @@ export default function Home() {
               ))}
             </nav>
 
-            {/* Right side */}
+            {/* Right side - Auth */}
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => { setBidArtwork(null); setLoginOpen(true) }}
-                className="hidden sm:flex bg-[#c9a96e]/10 text-[#c9a96e] hover:bg-[#c9a96e]/20 border border-[#c9a96e]/25 text-xs font-medium items-center gap-2"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                Member Login
-              </Button>
+              {currentUser ? (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="hidden sm:flex items-center gap-2 bg-[#c9a96e]/10 hover:bg-[#c9a96e]/15 border border-[#c9a96e]/25 rounded-lg px-3 py-1.5 transition-all"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#c9a96e]/20 flex items-center justify-center">
+                      <User className="w-3.5 h-3.5 text-[#c9a96e]" />
+                    </div>
+                    <span className="text-xs font-medium text-[#f5f0e8]">{currentUser.username}</span>
+                    <Badge className={`text-[8px] px-1.5 py-0 ${roleBadgeColor[currentUser.role] || roleBadgeColor.user}`}>
+                      {currentUser.role}
+                    </Badge>
+                    <ChevronDown className="w-3 h-3 text-[#888]" />
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  <AnimatePresence>
+                    {userMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                        className="absolute right-0 mt-2 w-64 bg-[#141414] border border-[#c9a96e]/15 rounded-xl shadow-xl overflow-hidden z-[70]"
+                      >
+                        <div className="p-4 border-b border-[#c9a96e]/10">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c9a96e] to-[#8b6f3a] flex items-center justify-center text-[#0a0a0a] font-bold text-sm">
+                              {currentUser.username[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-[#f5f0e8] truncate">{currentUser.username}</p>
+                              <p className="text-[10px] text-[#888] truncate">{currentUser.email}</p>
+                              <Badge className={`text-[8px] mt-1 ${roleBadgeColor[currentUser.role] || roleBadgeColor.user}`}>
+                                {currentUser.role.toUpperCase()}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] text-[#888]">
+                            <User className="w-3.5 h-3.5" />
+                            <span>ID: {currentUser.id}</span>
+                          </div>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors mt-1"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                            Sign Out
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => { setPendingBid(null); setAuthTab('login'); setAuthOpen(true) }}
+                  className="hidden sm:flex bg-[#c9a96e]/10 text-[#c9a96e] hover:bg-[#c9a96e]/20 border border-[#c9a96e]/25 text-xs font-medium items-center gap-2"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Member Login
+                </Button>
+              )}
               <button
                 className="lg:hidden p-2 rounded-lg hover:bg-white/[0.06] text-[#888]"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -174,13 +285,36 @@ export default function Home() {
                     {item.label}
                   </button>
                 ))}
-                <button
-                  onClick={() => { setBidArtwork(null); setLoginOpen(true); setMobileMenuOpen(false) }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#c9a96e]/10 text-[#c9a96e] text-sm mt-2"
-                >
-                  <Lock className="w-4 h-4" />
-                  Member Login
-                </button>
+                {currentUser ? (
+                  <>
+                    <div className="flex items-center gap-3 px-4 py-3 mt-2 border-t border-[#c9a96e]/10">
+                      <div className="w-8 h-8 rounded-full bg-[#c9a96e]/20 flex items-center justify-center">
+                        <User className="w-4 h-4 text-[#c9a96e]" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-[#f5f0e8]">{currentUser.username}</p>
+                        <Badge className={`text-[8px] ${roleBadgeColor[currentUser.role] || roleBadgeColor.user}`}>
+                          {currentUser.role}
+                        </Badge>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { handleLogout(); setMobileMenuOpen(false) }}
+                      className="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm text-red-400"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => { setPendingBid(null); setAuthTab('login'); setAuthOpen(true); setMobileMenuOpen(false) }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#c9a96e]/10 text-[#c9a96e] text-sm mt-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    Member Login
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -377,15 +511,15 @@ export default function Home() {
         </footer>
       </main>
 
-      {/* ============ LOGIN MODAL (SQL Injection) ============ */}
+      {/* ============ AUTH MODAL (Login / Signup with SQL Injection) ============ */}
       <AnimatePresence>
-        {loginOpen && (
+        {authOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-            onClick={() => setLoginOpen(false)}
+            onClick={() => setAuthOpen(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -394,22 +528,161 @@ export default function Home() {
               className="bg-[#111] border border-[#c9a96e]/15 rounded-2xl w-full max-w-md overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative h-32 bg-gradient-to-br from-[#c9a96e]/20 to-transparent flex items-center justify-center">
+              {/* Header */}
+              <div className="relative h-28 bg-gradient-to-br from-[#c9a96e]/20 to-transparent flex items-center justify-center">
                 <div className="text-center">
-                  <Lock className="w-8 h-8 text-[#c9a96e] mx-auto mb-2" />
+                  {authTab === 'login' ? (
+                    <Lock className="w-8 h-8 text-[#c9a96e] mx-auto mb-2" />
+                  ) : (
+                    <UserPlus className="w-8 h-8 text-[#c9a96e] mx-auto mb-2" />
+                  )}
                   <h3 className="text-lg font-bold text-[#f5f0e8]">
-                    {bidArtwork ? `Bid on "${bidArtwork.title}"` : 'Member Login'}
+                    {pendingBid ? `Bid on "${pendingBid.title}"` : authTab === 'login' ? 'Member Login' : 'Create Account'}
                   </h3>
-                  <p className="text-xs text-[#888] mt-1">Sign in to place bids and manage your collection</p>
+                  <p className="text-xs text-[#888] mt-1">
+                    {pendingBid
+                      ? 'Sign in to place your bid'
+                      : authTab === 'login' ? 'Sign in to place bids and manage your collection' : 'Join VulnArt to bid on exclusive pieces'
+                    }
+                  </p>
                 </div>
                 <button
-                  onClick={() => setLoginOpen(false)}
+                  onClick={() => setAuthOpen(false)}
                   className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-[#888] hover:text-[#f5f0e8]"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <LoginModal bidArtwork={bidArtwork} onClose={() => setLoginOpen(false)} />
+
+              {/* Tabs */}
+              <div className="flex border-b border-[#c9a96e]/10">
+                <button
+                  onClick={() => setAuthTab('login')}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors relative
+                    ${authTab === 'login' ? 'text-[#c9a96e]' : 'text-[#666] hover:text-[#999]'}`}
+                >
+                  Sign In
+                  {authTab === 'login' && <motion.div layoutId="auth-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#c9a96e]" />}
+                </button>
+                <button
+                  onClick={() => setAuthTab('signup')}
+                  className={`flex-1 py-3 text-xs font-medium transition-colors relative
+                    ${authTab === 'signup' ? 'text-[#c9a96e]' : 'text-[#666] hover:text-[#999]'}`}
+                >
+                  Create Account
+                  {authTab === 'signup' && <motion.div layoutId="auth-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#c9a96e]" />}
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="p-6">
+                {authTab === 'login' ? (
+                  <LoginForm onSuccess={handleAuthSuccess} pendingBid={pendingBid} />
+                ) : (
+                  <SignupForm onSuccess={handleAuthSuccess} onSwitchToLogin={() => setAuthTab('login')} />
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ============ BID MODAL ============ */}
+      <AnimatePresence>
+        {bidArtwork && currentUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setBidArtwork(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[#111] border border-[#c9a96e]/15 rounded-2xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Artwork preview */}
+              <div className="relative h-40 overflow-hidden">
+                <img
+                  src={bidArtwork.image}
+                  alt={bidArtwork.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
+                <button
+                  onClick={() => setBidArtwork(null)}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-[#888] hover:text-[#f5f0e8]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[#f5f0e8]">{bidArtwork.title}</h3>
+                  <p className="text-xs text-[#c9a96e]/70">{bidArtwork.artist} • {bidArtwork.medium}</p>
+                </div>
+
+                <div className="bg-[#0a0a0a] rounded-lg p-3 border border-[#c9a96e]/8">
+                  <p className="text-[9px] uppercase tracking-wider text-[#666] mb-1">Current Starting Bid</p>
+                  <p className="text-xl font-bold text-[#c9a96e]">${bidArtwork.startingBid.toLocaleString()}</p>
+                </div>
+
+                {!bidPlaced ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Your Bid Amount ($)</label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#555]" />
+                        <Input
+                          type="number"
+                          value={bidAmount}
+                          onChange={(e) => setBidAmount(e.target.value)}
+                          placeholder={bidArtwork.startingBid.toString()}
+                          min={bidArtwork.startingBid}
+                          className="pl-9 bg-[#0a0a0a] border-[#c9a96e]/15 text-[#f5f0e8] placeholder:text-[#444] text-sm"
+                          onKeyDown={(e) => e.key === 'Enter' && setBidPlaced(true)}
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => setBidPlaced(true)}
+                      disabled={!bidAmount || Number(bidAmount) < bidArtwork.startingBid}
+                      className="w-full bg-[#c9a96e] text-[#0a0a0a] hover:bg-[#d4b87d] font-semibold text-sm"
+                    >
+                      <Gavel className="w-4 h-4 mr-2" />
+                      Confirm Bid
+                    </Button>
+                    {bidAmount && Number(bidAmount) < bidArtwork.startingBid && (
+                      <p className="text-[10px] text-red-400 text-center">
+                        Bid must be at least ${bidArtwork.startingBid.toLocaleString()}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center py-4"
+                  >
+                    <CheckCircle2 className="w-12 h-12 text-[#c9a96e] mx-auto mb-3" />
+                    <h4 className="text-lg font-bold text-[#f5f0e8] mb-1">Bid Placed!</h4>
+                    <p className="text-2xl font-bold text-[#c9a96e] mb-2">${Number(bidAmount).toLocaleString()}</p>
+                    <p className="text-xs text-[#888]">on &ldquo;{bidArtwork.title}&rdquo; by {bidArtwork.artist}</p>
+                    <p className="text-[10px] text-[#666] mt-3">Bidding as <span className="text-[#c9a96e]">{currentUser.username}</span></p>
+                    <Button
+                      onClick={() => setBidArtwork(null)}
+                      className="mt-4 bg-[#c9a96e]/10 text-[#c9a96e] hover:bg-[#c9a96e]/20 border border-[#c9a96e]/25 text-xs"
+                    >
+                      Continue Browsing
+                    </Button>
+                  </motion.div>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -418,13 +691,13 @@ export default function Home() {
   )
 }
 
-// ============ LOGIN MODAL COMPONENT (SQL Injection) ============
-function LoginModal({ bidArtwork, onClose }: { bidArtwork: typeof artworks[0] | null; onClose: () => void }) {
+// ============ LOGIN FORM (SQL Injection) ============
+function LoginForm({ onSuccess, pendingBid }: { onSuccess: (user: any) => void; pendingBid: typeof artworks[0] | null }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message: string; user?: any } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; message?: string; user?: any; error?: string } | null>(null)
   const [rawQuery, setRawQuery] = useState('')
 
   const handleLogin = async () => {
@@ -440,21 +713,24 @@ function LoginModal({ bidArtwork, onClose }: { bidArtwork: typeof artworks[0] | 
       const data = await res.json()
       setResult(data)
       setRawQuery(`SELECT * FROM User WHERE username = '${username}' AND password = '${password}'`)
+      if (data.success && data.user) {
+        setTimeout(() => onSuccess(data.user), 800)
+      }
     } catch (e: any) {
-      setResult({ success: false, message: 'Connection error: ' + e.message })
+      setResult({ success: false, error: 'Connection error: ' + e.message })
     }
     setLoading(false)
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Email or Username</label>
+          <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Username or Email</label>
           <Input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="collector@vulnart.com"
+            placeholder="admin"
             className="bg-[#0a0a0a] border-[#c9a96e]/15 text-[#f5f0e8] placeholder:text-[#444] text-sm"
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           />
@@ -484,13 +760,14 @@ function LoginModal({ bidArtwork, onClose }: { bidArtwork: typeof artworks[0] | 
           className="w-full bg-[#c9a96e] text-[#0a0a0a] hover:bg-[#d4b87d] font-semibold text-sm"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-          <span className="ml-2">Sign In{bidArtwork ? ' & Place Bid' : ''}</span>
+          <span className="ml-2">Sign In</span>
         </Button>
       </div>
 
       <div className="text-center">
         <p className="text-[10px] text-[#555]">
-          Demo accounts: <span className="text-[#c9a96e]/60 font-mono">admin / admin123</span>
+          Test accounts: <span className="text-[#c9a96e]/60 font-mono">admin / admin123</span> &bull;{' '}
+          <span className="text-[#c9a96e]/60 font-mono">user / user123</span>
         </p>
       </div>
 
@@ -515,6 +792,131 @@ function LoginModal({ bidArtwork, onClose }: { bidArtwork: typeof artworks[0] | 
             </span>
           </div>
           <pre className="text-[10px] text-[#888] font-mono whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============ SIGNUP FORM ============
+function SignupForm({ onSuccess, onSwitchToLogin }: { onSuccess: (user: any) => void; onSwitchToLogin: () => void }) {
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ success: boolean; message?: string; user?: any; error?: string } | null>(null)
+
+  const handleSignup = async () => {
+    setLoading(true)
+    setResult(null)
+
+    if (password !== confirmPassword) {
+      setResult({ success: false, error: 'Passwords do not match' })
+      setLoading(false)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, email }),
+      })
+      const data = await res.json()
+      setResult(data)
+      if (data.success && data.user) {
+        setTimeout(() => onSuccess(data.user), 800)
+      }
+    } catch (e: any) {
+      setResult({ success: false, error: 'Connection error: ' + e.message })
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Username</label>
+          <Input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Choose a username"
+            className="bg-[#0a0a0a] border-[#c9a96e]/15 text-[#f5f0e8] placeholder:text-[#444] text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Email</label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="bg-[#0a0a0a] border-[#c9a96e]/15 text-[#f5f0e8] placeholder:text-[#444] text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Password</label>
+          <div className="relative">
+            <Input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Min 6 characters"
+              className="bg-[#0a0a0a] border-[#c9a96e]/15 text-[#f5f0e8] placeholder:text-[#444] text-sm pr-10"
+            />
+            <button
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#999]"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-[#888] font-medium uppercase tracking-wider">Confirm Password</label>
+          <Input
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            type="password"
+            placeholder="••••••••"
+            className="bg-[#0a0a0a] border-[#c9a96e]/15 text-[#f5f0e8] placeholder:text-[#444] text-sm"
+            onKeyDown={(e) => e.key === 'Enter' && handleSignup()}
+          />
+        </div>
+        <Button
+          onClick={handleSignup}
+          disabled={loading || !username || !email || !password || !confirmPassword}
+          className="w-full bg-[#c9a96e] text-[#0a0a0a] hover:bg-[#d4b87d] font-semibold text-sm"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+          <span className="ml-2">Create Account</span>
+        </Button>
+      </div>
+
+      <div className="text-center">
+        <p className="text-[10px] text-[#555]">
+          Already have an account?{' '}
+          <button onClick={onSwitchToLogin} className="text-[#c9a96e] hover:underline">Sign in</button>
+        </p>
+      </div>
+
+      {result && (
+        <div className={`rounded-lg border p-3 ${result.success ? 'bg-[#c9a96e]/5 border-[#c9a96e]/20' : 'bg-red-500/5 border-red-500/20'}`}>
+          <div className="flex items-center gap-2 mb-1.5">
+            {result.success
+              ? <CheckCircle2 className="w-4 h-4 text-[#c9a96e]" />
+              : <XCircle className="w-4 h-4 text-red-400" />
+            }
+            <span className={`text-xs font-medium ${result.success ? 'text-[#c9a96e]' : 'text-red-400'}`}>
+              {result.success ? `Welcome, ${result.user?.username}!` : (result.error || 'Signup failed')}
+            </span>
+          </div>
+          {result.success && (
+            <p className="text-[10px] text-[#888]">Your account has been created. You can now place bids.</p>
+          )}
         </div>
       )}
     </div>
@@ -860,45 +1262,47 @@ function CollectorSection() {
         </CardContent>
       </Card>
 
-      {result && result.success && result.user && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
-          <Card className="bg-[#111] border-[#c9a96e]/15 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#c9a96e]/10 to-transparent p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#c9a96e]/15 flex items-center justify-center border border-[#c9a96e]/20">
-                  <span className="text-lg font-bold text-[#c9a96e]">{result.user.username?.[0]?.toUpperCase()}</span>
+      {result && (
+        <div className="mt-6">
+          {result.success ? (
+            <Card className="bg-[#111] border-[#c9a96e]/15">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm text-[#f5f0e8] flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#c9a96e]" />
+                    {result.user?.username}
+                  </CardTitle>
+                  <Badge className="bg-[#c9a96e]/20 text-[#c9a96e] border-[#c9a96e]/30 text-[10px]">
+                    {result.user?.role}
+                  </Badge>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-[#f5f0e8]">{result.user.username}</h3>
-                  <p className="text-xs text-[#c9a96e]/70">{result.user.role?.toUpperCase()} Collector</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Email', value: result.user?.email },
+                    { label: 'SSN', value: result.user?.ssn },
+                    { label: 'Credit Card', value: result.user?.creditCard },
+                    { label: 'Address', value: result.user?.address },
+                    { label: 'User ID', value: result.user?.id },
+                  ].map(item => (
+                    <div key={item.label} className="space-y-0.5 col-span-2 sm:col-span-1">
+                      <p className="text-[9px] uppercase tracking-wider text-[#666]">{item.label}</p>
+                      <p className="text-xs text-[#f5f0e8] font-mono">{item.value}</p>
+                    </div>
+                  ))}
                 </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <XCircle className="w-4 h-4 text-red-400" />
+                <span className="text-sm text-red-400">Collector Not Found</span>
               </div>
+              <pre className="text-[10px] text-[#888] font-mono">{result.error || JSON.stringify(result, null, 2)}</pre>
             </div>
-            <CardContent className="p-4 space-y-3">
-              {[
-                { label: 'Email', value: result.user.email },
-                { label: 'Tax ID (SSN)', value: result.user.ssn },
-                { label: 'Payment Method', value: result.user.creditCard },
-                { label: 'Address', value: result.user.address },
-                { label: 'Member Since', value: result.user.createdAt ? new Date(result.user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A' },
-              ].map(field => (
-                <div key={field.label} className="flex items-start justify-between py-2 border-b border-[#c9a96e]/5 last:border-0">
-                  <span className="text-[11px] text-[#666] uppercase tracking-wider">{field.label}</span>
-                  <span className="text-xs text-[#f5f0e8] font-mono text-right max-w-[60%]">{field.value}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {result && !result.success && (
-        <div className="mt-6 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <XCircle className="w-4 h-4 text-red-400" />
-            <span className="text-sm text-red-400">Collector Not Found</span>
-          </div>
-          <pre className="text-[10px] text-[#888] font-mono">{result.error}</pre>
+          )}
         </div>
       )}
     </motion.div>
