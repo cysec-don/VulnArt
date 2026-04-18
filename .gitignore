@@ -55,3 +55,6 @@ upload/
 
 # Test
 coverage/
+
+# VHOST PID files
+.vhost-pids/

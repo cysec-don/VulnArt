@@ -1,60 +1,81 @@
 # 🎨 Vuln Art Shop - CTF Lab Setup Guide
 
+**Created & Produced by Cysec Don** | cysecdon@gmail.com
+
+---
+
 ## Table of Contents
-1. [Prerequisites](#prerequisites)
-2. [Quick Start](#quick-start)
-3. [Host Configuration](#host-configuration)
-4. [Docker Deployment](#docker-deployment)
-5. [Accessing the Platform](#accessing-the-platform)
-6. [Virtual Hosts](#virtual-hosts)
+
+1. [Installation Methods](#installation-methods)
+2. [Method 1: Direct Install (Recommended)](#method-1-direct-install)
+3. [Method 2: Direct Install + Virtual Hosts](#method-2-direct-install--virtual-hosts)
+4. [Method 3: Docker Install (Alternative)](#method-3-docker-install)
+5. [Host Configuration](#host-configuration)
+6. [Verifying the Lab](#verifying-the-lab)
 7. [Resetting the Lab](#resetting-the-lab)
 8. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Prerequisites
+## Installation Methods
 
-- **Docker** (v20.10+)
-- **Docker Compose** (v2.0+)
-- **4GB RAM** minimum (8GB recommended)
-- **10GB disk space**
-- A modern web browser (Chrome/Firefox recommended)
-- Network tools: `nmap`, `curl`, `ffuf` or `gobuster` (for CTF participants)
+| Method | Flags | Setup Time | Best For |
+|--------|-------|------------|----------|
+| **1. Direct Install** | 15/18 | ~2 min | Solo learners, quick start |
+| **2. Direct + VHOSTs** | 18/18 | ~10 min | Complete CTF experience |
+| **3. Docker** | 18/18 | ~5 min | Classrooms, labs, teams |
 
----
-
-## Quick Start
-
-```bash
-# 1. Clone or navigate to the project
-cd vuln-art-shop
-
-# 2. Configure /etc/hosts (see below)
-
-# 3. Build and start all containers
-cd docker
-docker-compose up -d --build
-
-# 4. Wait for services to initialize (about 30 seconds)
-docker-compose logs -f web
-
-# 5. Access the platform
-# Main site: http://vulnart.local
-```
+> See [INSTALL.md](INSTALL.md) for the most detailed installation instructions.
 
 ---
 
-## Host Configuration
+## Method 1: Direct Install
 
-### Linux / macOS
+The simplest and fastest way to get started. No Docker needed.
 
-Edit `/etc/hosts`:
+### Prerequisites
+
+- **Node.js** 20+ — [nodejs.org](https://nodejs.org)
+- **Bun** (recommended) or **npm** — included with Node.js
+- **Git** — [git-scm.com](https://git-scm.com)
+
+### Setup
 
 ```bash
-sudo nano /etc/hosts
+# Clone
+git clone https://github.com/cysec-don/VulnArt.git
+cd VulnArt
+
+# Install dependencies
+bun install
+
+# Initialize database
+bun run db:push
+bunx prisma db seed
+
+# Start the server
+bun run dev
 ```
 
-Add these entries:
+### Access
+
+Open **http://localhost:3000** in your browser. Login with `artist1` / `password123`.
+
+This gives you access to 15 out of 18 flags. The remaining 3 flags (virtual host discovery) require Method 2 or 3.
+
+---
+
+## Method 2: Direct Install + Virtual Hosts
+
+Full CTF experience on bare metal with all 18 flags.
+
+### Step 1: Complete Method 1
+
+Follow all steps above. Verify `http://localhost:3000` works.
+
+### Step 2: Configure Hosts File
+
+Edit `/etc/hosts` (Linux/macOS) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
 
 ```
 # Vuln Art Shop CTF Lab
@@ -65,59 +86,79 @@ Add these entries:
 127.0.0.1  staging.vulnart.local
 ```
 
-### Windows
-
-Edit `C:\Windows\System32\drivers\etc\hosts` as Administrator and add the same entries.
-
-### Verification
-
-Test that hosts are configured correctly:
+### Step 3: Install & Configure Nginx
 
 ```bash
-curl -I http://vulnart.local
-curl -I http://admin.vulnart.local
-curl -I http://dev.vulnart.local
-curl -I http://staging.vulnart.local
+# Install Nginx
+sudo apt install nginx    # Linux
+brew install nginx         # macOS
+
+# Copy configuration files
+sudo cp docker/nginx/nginx.conf /etc/nginx/nginx.conf
+sudo mkdir -p /etc/nginx/conf.d /etc/nginx/vhosts
+sudo cp docker/nginx/conf.d/main.conf /etc/nginx/conf.d/
+sudo cp docker/nginx/vhosts/admin.conf /etc/nginx/vhosts/
+sudo cp docker/nginx/vhosts/dev.conf /etc/nginx/vhosts/
+sudo cp docker/nginx/vhosts/staging.conf /etc/nginx/vhosts/
+
+# Test and restart
+sudo nginx -t
+sudo systemctl restart nginx
 ```
 
-Each should return different `X-Powered-By` headers.
+### Step 4: Start VHOST Services
+
+```bash
+# Start all vhost services
+./scripts/start-vhosts.sh start
+
+# Check status
+./scripts/start-vhosts.sh status
+```
+
+### Step 5: Verify
+
+```bash
+curl -I http://vulnart.local          # X-Powered-By: VulnArt/1.0.0
+curl -I http://admin.vulnart.local    # X-Powered-By: VulnArt-Admin/2.0.0
+curl -I http://dev.vulnart.local      # X-Powered-By: VulnArt-Dev/0.9.0-beta
+curl -I http://staging.vulnart.local  # X-Powered-By: VulnArt-Staging/1.0.0-rc1
+```
 
 ---
 
-## Docker Deployment
+## Method 3: Docker Install
 
-### Building
+Containerized deployment with all services included.
+
+### Prerequisites
+
+- **Docker** (v20.10+)
+- **Docker Compose** (v2.0+)
+- **4GB RAM** minimum
+
+### Setup
 
 ```bash
-cd docker
-docker-compose build
+git clone https://github.com/cysec-don/VulnArt.git
+cd VulnArt/docker
+docker-compose up -d --build
 ```
 
-### Starting
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Start specific service
-docker-compose up -d web postgres nginx
-
-# Check status
-docker-compose ps
-```
+Configure hosts file (same as Method 2, Step 2), then access `http://vulnart.local`.
 
 ### Service Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Nginx (Port 80)                       │
-│  Routes requests based on Host header to vhosts         │
-├─────────────┬──────────────┬──────────────┬─────────────┤
-│ vulnart.local│admin.vulnart │dev.vulnart   │staging.     │
-│  → web:3000  │.local        │.local        │vulnart.local│
-│              │ → admin:3001  │ → dev:3002   │→ staging:   │
-│              │              │              │   3003      │
-├─────────────┴──────────────┴──────────────┴─────────────┤
+│          Routes requests based on Host header            │
+├──────────────┬───────────────┬──────────────┬───────────┤
+│ vulnart.local│admin.vulnart  │dev.vulnart   │staging.   │
+│  → web:3000  │.local         │.local        │vulnart.   │
+│              │ → admin:3001  │ → dev:3002   │local      │
+│              │               │              │→ stag:3003│
+├──────────────┴───────────────┴──────────────┴───────────┤
 │                PostgreSQL (Port 5432)                    │
 │              Shared database: vulnart                    │
 └─────────────────────────────────────────────────────────┘
@@ -136,158 +177,159 @@ docker-compose ps
 
 ---
 
-## Accessing the Platform
+## Host Configuration
 
-### Main Site
-- URL: `http://vulnart.local`
-- Description: The art marketplace front-end
-- Default test account: `artist1` / `password123`
+### Linux / macOS
 
-### Admin Panel (Hidden)
-- URL: `http://vulnart.local/admin-panel-x7k9`
-- Description: Hidden admin panel (not linked from navigation)
-- Requires: Admin session or direct access
+```bash
+sudo nano /etc/hosts
+```
 
-### Virtual Hosts (Discoverable)
+Add:
+```
+# Vuln Art Shop CTF Lab
+127.0.0.1  vulnart.local
+127.0.0.1  www.vulnart.local
+127.0.0.1  admin.vulnart.local
+127.0.0.1  dev.vulnart.local
+127.0.0.1  staging.vulnart.local
+```
 
-| VHost | URL | Discovery Method |
-|-------|-----|------------------|
-| Admin | `http://admin.vulnart.local` | DNS/vhost enumeration |
-| Dev | `http://dev.vulnart.local` | DNS/vhost enumeration |
-| Staging | `http://staging.vulnart.local` | DNS/vhost enumeration |
+### Windows
+
+Open `C:\Windows\System32\drivers\etc\hosts` as Administrator and add the same entries.
+
+### DNS Cache Flush
+
+```bash
+# macOS
+sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
+
+# Linux
+sudo systemd-resolve --flush-caches
+
+# Windows
+ipconfig /flushdns
+```
 
 ---
 
-## Virtual Hosts
+## Verifying the Lab
 
-### admin.vulnart.local
-- Port: 3001
-- Features: System status, user list, admin flags
-- Header: `X-Powered-By: VulnArt-Admin/2.0.0`
-- Contains: `FLAG{vh0st_3num3r4t10n_w1n}`
-
-### dev.vulnart.local
-- Port: 3002
-- Features: Environment variables, API docs, DB schema, debug info
-- Header: `X-Powered-By: VulnArt-Dev/0.9.0-beta`
-- Contains: `FLAG{d3v_vh0st_3xp0s3d}`
-
-### staging.vulnart.local
-- Port: 3003
-- Features: API documentation, test accounts, DB schema
-- Header: `X-Powered-By: VulnArt-Staging/1.0.0-rc1`
-- Contains: `FLAG{st4g1ng_3nv_fl4g}`
-
-### Discovering Virtual Hosts
-
-Participants can discover vhosts using:
+### Quick Health Check (All Methods)
 
 ```bash
-# Using curl with Host header
-curl -H "Host: admin.vulnart.local" http://vulnart.local
+# Is the server running?
+curl -s http://localhost:3000/api/artworks | jq '.artworks | length'
+# Expected: 50
 
-# Using ffuf for vhost enumeration
-ffuf -u http://vulnart.local -H "Host: FUZZ.vulnart.local" -w vhost-wordlist.txt
-
-# Using nmap
-nmap -p 80 --script http-vhosts vulnart.local
+# Can you access the main page?
+curl -s http://localhost:3000 | head -20
 ```
+
+### Virtual Host Verification (Method 2/3 only)
+
+```bash
+# Each vhost should return different X-Powered-By headers
+curl -I http://vulnart.local
+curl -I http://admin.vulnart.local
+curl -I http://dev.vulnart.local
+curl -I http://staging.vulnart.local
+```
+
+### Full Checklist
+
+- [ ] Home page loads (localhost:3000 or vulnart.local)
+- [ ] Gallery shows 50 artworks
+- [ ] Registration and login work
+- [ ] robots.txt accessible
+- [ ] Hidden .env file accessible
+- [ ] Admin panel at /admin-panel-x7k9
+- [ ] (VHOST only) admin.vulnart.local responds
+- [ ] (VHOST only) dev.vulnart.local responds
+- [ ] (VHOST only) staging.vulnart.local responds
 
 ---
 
 ## Resetting the Lab
 
-### Full Reset
-
-```bash
-# Stop and remove all containers, volumes, and networks
-cd docker
-docker-compose down -v
-
-# Rebuild and restart
-docker-compose up -d --build
-```
-
-### Database Only Reset
+### Direct Install (Method 1 & 2)
 
 ```bash
 # Reset the database
-docker-compose exec web npx prisma migrate reset --force
+rm -f prisma/dev.db
+bun run db:push
+bunx prisma db seed
 
-# Re-seed the database
-docker-compose exec web npx prisma db seed
+# Restart vhost services (Method 2 only)
+./scripts/start-vhosts.sh restart
 ```
 
-### Quick Reset (Preserves Config)
+### Docker Install (Method 3)
 
 ```bash
-# Restart all containers
+cd docker
+
+# Full reset (removes all data)
+docker-compose down -v
+docker-compose up -d --build
+
+# Quick restart (preserves data)
 docker-compose restart
 
-# Restart specific service
-docker-compose restart web
-```
-
-### Clean Slate
-
-```bash
-# Remove everything including images
-docker-compose down -v --rmi all
-
-# Start fresh
-docker-compose up -d --build
+# Database only reset
+docker-compose exec web npx prisma migrate reset --force
 ```
 
 ---
 
 ## Troubleshooting
 
-### Port Conflicts
-
-If port 80 is already in use:
-
+### "bun: command not found"
 ```bash
-# Check what's using port 80
-sudo lsof -i :80
-
-# Stop the conflicting service
-sudo systemctl stop apache2  # or nginx, etc.
+curl -fsSL https://bun.sh/install | bash && source ~/.bashrc
 ```
 
-### Container Won't Start
-
+### "node: command not found"
 ```bash
-# Check logs
-docker-compose logs web
-docker-compose logs postgres
-
-# Restart specific container
-docker-compose restart web
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc && nvm install 20
 ```
 
-### Database Connection Issues
-
+### Port 3000 in use
 ```bash
-# Verify PostgreSQL is running
-docker-compose exec postgres pg_isready -U vulnart
-
-# Check connection from web container
-docker-compose exec web nc -zv postgres 5432
+lsof -i :3000 && kill -9 <PID>
+# Or use a different port:
+PORT=3001 bun run dev
 ```
 
-### Virtual Hosts Not Working
-
-1. Verify `/etc/hosts` entries are correct
-2. Clear browser DNS cache
-3. Try: `curl -v http://admin.vulnart.local`
-
+### Nginx won't start
 ```bash
-# Flush DNS cache (macOS)
-sudo dscacheutil -flushcache
-sudo killall -HUP mDNSResponder
+sudo nginx -t                    # Test config
+sudo lsof -i :80                 # Check for conflicts
+sudo systemctl stop apache2      # Stop Apache if running
+sudo systemctl restart nginx     # Restart Nginx
+```
 
-# Flush DNS cache (Linux)
-sudo systemd-resolve --flush-caches
+### Virtual hosts not working
+1. Verify `/etc/hosts` entries
+2. Flush DNS cache (see above)
+3. Verify vhost services are running: `./scripts/start-vhosts.sh status`
+4. Test directly: `curl http://localhost:3001` (admin vhost)
+
+### Docker container won't start
+```bash
+cd docker
+docker-compose logs web          # Check logs
+docker-compose restart web       # Restart
+docker-compose down -v && docker-compose up -d --build  # Full rebuild
+```
+
+### Database seed fails
+```bash
+rm -f prisma/dev.db
+bun run db:push
+bunx tsx prisma/seed.ts          # Run seed manually
 ```
 
 ---
@@ -302,8 +344,6 @@ sudo systemd-resolve --flush-caches
 | nmap | Port scanning & enumeration | `apt install nmap` |
 | curl | HTTP requests | Pre-installed |
 | jq | JSON processing | `apt install jq` |
-| DirBuster | Directory enumeration | `apt install dirbuster` |
-| wfuzz | Web fuzzer | `pip install wfuzz` |
 
 ---
 

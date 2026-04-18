@@ -96,78 +96,95 @@ By completing all challenges in Vuln Art Shop, you will learn:
 
 ## Environment Setup
 
-### Prerequisites
+Vuln Art Shop can be installed directly on your system or deployed with Docker. **Direct installation is the recommended and fastest method.** For detailed instructions, see [INSTALL.md](INSTALL.md).
 
-Before you begin, ensure you have:
+### Method 1: Direct Install (Recommended — 2 minutes)
 
-| Requirement | Minimum | Recommended |
-|-------------|---------|-------------|
-| Docker | v20.10+ | Latest |
-| Docker Compose | v2.0+ | Latest |
-| RAM | 4GB | 8GB |
-| Disk Space | 10GB | 20GB |
-| Browser | Chrome/Firefox | Latest |
+#### Prerequisites
 
-### Step-by-Step Setup
+| Requirement | Version | Install |
+|-------------|---------|---------|
+| **Node.js** | 20+ | [nodejs.org](https://nodejs.org) or `nvm install 20` |
+| **Bun** (recommended) | Latest | `curl -fsSL https://bun.sh/install \| bash` |
+| **npm** (alternative) | 9+ | Comes with Node.js |
+| **Browser** | Chrome/Firefox | Latest |
 
-#### 1. Clone the Repository
+#### Setup
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/cysec-don/VulnArt.git
 cd VulnArt
+
+# 2. Install dependencies
+bun install
+
+# 3. Initialize the database
+bun run db:push
+bunx prisma db seed
+
+# 4. Start the server
+bun run dev
 ```
 
-#### 2. Configure Your Hosts File
+Open **http://localhost:3000** in your browser. Login with `artist1` / `password123`.
 
-This step is **critical** for virtual host discovery challenges.
+> This gives you access to **15 out of 18 flags** immediately. The remaining 3 flags require virtual host setup (see Method 2 below).
 
-**Linux/macOS:**
+### Method 2: Direct Install + Virtual Hosts (Full Experience — 10 minutes)
+
+Adds Nginx reverse proxy and virtual host services for all 18 flags.
+
 ```bash
+# After completing Method 1 above:
+
+# 1. Add vhost entries to /etc/hosts
 sudo nano /etc/hosts
+# Add: 127.0.0.1  vulnart.local admin.vulnart.local dev.vulnart.local staging.vulnart.local
+
+# 2. Install Nginx
+sudo apt install nginx
+
+# 3. Copy Nginx configuration
+sudo cp docker/nginx/nginx.conf /etc/nginx/nginx.conf
+sudo mkdir -p /etc/nginx/conf.d /etc/nginx/vhosts
+sudo cp docker/nginx/conf.d/main.conf /etc/nginx/conf.d/
+sudo cp docker/nginx/vhosts/*.conf /etc/nginx/vhosts/
+sudo nginx -t && sudo systemctl restart nginx
+
+# 4. Start vhost services
+./scripts/start-vhosts.sh start
 ```
 
-**Windows (Run as Administrator):**
-```
-notepad C:\Windows\System32\drivers\etc\hosts
-```
+Now access via virtual hosts: `http://vulnart.local`, `http://admin.vulnart.local`, `http://dev.vulnart.local`, `http://staging.vulnart.local`
 
-Add these lines:
-```
-# Vuln Art Shop CTF Lab
-127.0.0.1  vulnart.local
-127.0.0.1  www.vulnart.local
-127.0.0.1  admin.vulnart.local
-127.0.0.1  dev.vulnart.local
-127.0.0.1  staging.vulnart.local
-```
+### Method 3: Docker Install (Alternative — 5 minutes)
 
-#### 3. Build and Deploy
+For containerized deployment with everything included. Best for classroom environments.
+
+#### Prerequisites
+
+| Requirement | Version |
+|-------------|---------|
+| **Docker** | v20.10+ |
+| **Docker Compose** | v2.0+ |
+| **RAM** | 4GB+ |
+
+#### Setup
 
 ```bash
-cd docker
+# 1. Clone and deploy
+git clone https://github.com/cysec-don/VulnArt.git
+cd VulnArt/docker
 docker-compose up -d --build
-```
 
-Wait approximately 30-60 seconds for all services to start.
+# 2. Configure /etc/hosts (same as Method 2, step 1)
 
-#### 4. Verify Deployment
-
-```bash
-# Check all containers are running
-docker-compose ps
-
-# Test the main site
+# 3. Wait ~30 seconds, then verify
 curl -I http://vulnart.local
-
-# Test virtual hosts
-curl -I http://admin.vulnart.local
-curl -I http://dev.vulnart.local
-curl -I http://staging.vulnart.local
 ```
 
-Each virtual host should return different `X-Powered-By` headers.
-
-#### 5. Install CTF Tools
+### Install CTF Tools (All Methods)
 
 ```bash
 # ffuf - Directory and vhost fuzzing
@@ -601,10 +618,17 @@ When approaching any web application for security testing, follow this methodolo
 
 ### Lab Setup
 
-1. Deploy the platform using the Docker setup in the `docker/` directory
-2. Ensure all virtual hosts are configured in students' `/etc/hosts`
-3. Distribute only the `LAB_SETUP_GUIDE.md` — keep `INSTRUCTOR_FLAG_GUIDE.md` private
-4. Recommended lab duration: 6-8 weeks for complete curriculum
+1. **Direct install** (recommended for most classrooms):
+   ```bash
+   git clone https://github.com/cysec-don/VulnArt.git
+   cd VulnArt
+   bun install && bun run db:push && bunx prisma db seed
+   bun run dev
+   ```
+2. For full virtual host experience, add Nginx and vhost services (see [INSTALL.md](INSTALL.md))
+3. Ensure all virtual hosts are configured in students' `/etc/hosts` (Method 2/3 only)
+4. Distribute only the `CTF_TRAINING_GUIDE.md` — keep `INSTRUCTOR_FLAG_GUIDE.md` private
+5. Recommended lab duration: 6-8 weeks for complete curriculum
 
 ### Student Management
 
@@ -632,34 +656,51 @@ When approaching any web application for security testing, follow this methodolo
 ### Reset Options
 
 ```bash
-# Full lab reset (all student data cleared)
-cd docker && docker-compose down -v && docker-compose up -d --build
+# Direct install: full lab reset (clears all student data)
+rm -f prisma/dev.db && bun run db:push && bunx prisma db seed
 
-# Quick restart (preserves data)
-cd docker && docker-compose restart
+# Docker: full lab reset
+cd docker && docker-compose down -v && docker-compose up -d --build
 ```
 
 ---
 
 ## Reset & Troubleshooting
 
-### Full Lab Reset
+### Direct Install Reset
+
+```bash
+# Reset the database (clears all user data)
+rm -f prisma/dev.db
+bun run db:push
+bunx prisma db seed
+
+# Alternative
+npx prisma migrate reset --force
+```
+
+### Docker Reset
 
 ```bash
 cd docker
-docker-compose down -v    # Stop and remove containers + volumes
-docker-compose up -d --build  # Rebuild and restart
+docker-compose down -v
+docker-compose up -d --build
 ```
 
 ### Common Issues
 
 | Issue | Solution |
 |-------|----------|
+| `bun: command not found` | Install: `curl -fsSL https://bun.sh/install \| bash` |
+| `node: command not found` | Install: `nvm install 20` |
+| Port 3000 in use | `lsof -i :3000` then `kill -9 <PID>` |
 | Port 80 in use | Stop Apache/Nginx: `sudo systemctl stop apache2` |
 | Can't access vhosts | Verify `/etc/hosts` entries, flush DNS cache |
 | 502 Bad Gateway | Wait for web container to fully start (30s) |
-| Database errors | Reset: `docker-compose exec web npx prisma migrate reset` |
-| Missing artworks | Re-seed: check the seed script ran on startup |
+| Database errors | Reset: `rm -f prisma/dev.db && bun run db:push && bunx prisma db seed` |
+| Missing artworks | Re-seed: `bunx prisma db seed` or `bunx tsx prisma/seed.ts` |
+| Seed fails | `bunx tsx prisma/seed.ts` (run manually) |
+| Nginx won't start | `sudo nginx -t` to test config |
 
 ### DNS Cache Flush
 
