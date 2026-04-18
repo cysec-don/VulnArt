@@ -1,0 +1,9 @@
+Level 2 - Getting warmer
+=======================
+
+You're persistent! Here's a clue about the API:
+
+The /api/v1/export endpoint returns all user data in JSON format.
+No authentication required.
+
+Also, check out /api/v2/search?q= where special characters might cause interesting errors.

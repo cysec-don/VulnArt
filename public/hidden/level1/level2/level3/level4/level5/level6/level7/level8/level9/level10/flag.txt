@@ -1,0 +1,9 @@
+FLAG{d33p_n3st3d_f1l3s_w1n}
+
+Congratulations! You've navigated through 10 levels of nested directories!
+
+This is a medium-tier flag worth 300 points.
+Submit it at the flag submission form in your profile.
+
+You've proven your persistence and exploration skills.
+Now go find the rest of the flags!

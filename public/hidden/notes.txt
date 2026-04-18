@@ -1,0 +1,28 @@
+Vuln Art Shop - Developer Notes
+================================
+
+Project: Vuln Art Shop
+Lead Dev: Mike Curator (curator_mike)
+Start Date: 2024-01-15
+
+IMPORTANT REMINDERS:
+- Debug mode is enabled in production (/api/debug/env)
+- The admin panel is at /admin-panel-x7k9 (not linked from UI)
+- Default admin: curator_mike / m1k3curat0r
+- Backup admin: backup_admin / bkp@dm1n!
+
+PENDING FIXES:
+1. User registration doesn't sanitize username input
+2. Profile update endpoint allows role changes (IDOR vulnerability)
+3. Auction bid endpoint has no server-side minimum validation
+4. Rental days parameter is not validated (can exceed 365)
+5. Several internal APIs have no auth checks
+6. The .env file is accidentally served statically
+7. Hidden directories are accessible from the web
+
+NOTES FOR CTF PLAYERS:
+- There are hidden files throughout the directory structure
+- Check robots.txt for clues about hidden paths
+- The export API at /api/v1/export leaks user data
+- Internal stats at /api/internal/stats has sensitive info
+- Search API v2 has injection-like error behavior

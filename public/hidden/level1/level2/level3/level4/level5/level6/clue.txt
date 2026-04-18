@@ -1,0 +1,7 @@
+Level 6 - Almost there (sort of)
+=================================
+
+The developer notes at /hidden/notes.txt list all known vulnerabilities.
+They also mention the admin panel path and default credentials.
+
+You still have 4 more levels to go...

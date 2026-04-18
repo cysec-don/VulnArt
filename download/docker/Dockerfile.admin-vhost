@@ -1,0 +1,120 @@
+# ==============================
+# Vuln Art Shop - Admin VHOST Service
+# Runs on port 3001 - admin panel with extended functionality
+# ==============================
+
+FROM node:20-alpine
+WORKDIR /app
+
+# Install a simple static admin panel
+RUN apk add --no-cache curl
+
+# Create admin panel files
+RUN mkdir -p /app/public /app/src
+
+COPY <<'EOF' /app/server.js
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const PORT = 3001;
+
+const adminPage = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vuln Art Shop - Administration</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #eee; padding: 2rem; }
+        h1 { color: #e94560; margin-bottom: 1rem; }
+        .panel { background: #16213e; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #0f3460; }
+        .flag { background: #e94560; color: white; padding: 0.5rem 1rem; border-radius: 4px; font-family: monospace; }
+        .info { color: #a8a8a8; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #0f3460; }
+        th { color: #e94560; }
+        .warning { color: #ff6b6b; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Vuln Art Shop - Admin Panel</h1>
+    <div class="panel">
+        <h2>System Status</h2>
+        <p class="info">All services operational</p>
+        <table>
+            <tr><th>Service</th><th>Status</th><th>Port</th></tr>
+            <tr><td>Main Web App</td><td>Running</td><td>3000</td></tr>
+            <tr><td>Admin Panel</td><td>Running</td><td>3001</td></tr>
+            <tr><td>Dev Server</td><td>Running</td><td>3002</td></tr>
+            <tr><td>Staging</td><td>Running</td><td>3003</td></tr>
+            <tr><td>PostgreSQL</td><td>Running</td><td>5432</td></tr>
+        </table>
+    </div>
+    <div class="panel">
+        <h2>Admin Flag</h2>
+        <p class="warning">This flag is only accessible through the admin virtual host.</p>
+        <p class="flag">FLAG{vh0st_3num3r4t10n_w1n}</p>
+    </div>
+    <div class="panel">
+        <h2>Registered Users</h2>
+        <p class="info">Loading from shared database...</p>
+        <table>
+            <tr><th>Username</th><th>Role</th><th>Email</th></tr>
+            <tr><td>artist1</td><td>user</td><td>artist1@vulnart.shop</td></tr>
+            <tr><td>collector_jane</td><td>premium</td><td>jane@vulnart.shop</td></tr>
+            <tr><td>artlover99</td><td>user</td><td>artlover99@vulnart.shop</td></tr>
+            <tr><td>curator_mike</td><td>admin</td><td>mike@vulnart.shop</td></tr>
+            <tr><td>dev_test</td><td>user</td><td>dev@vulnart.shop</td></tr>
+            <tr><td>backup_admin</td><td>admin</td><td>backup@vulnart.shop</td></tr>
+        </table>
+    </div>
+</body>
+</html>
+`;
+
+const server = http.createServer((req, res) => {
+    res.setHeader('X-Powered-By', 'VulnArt-Admin/2.0.0');
+    res.setHeader('X-Backend', 'admin-service');
+
+    if (req.url === '/' || req.url === '/index.html') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(adminPage);
+    } else if (req.url === '/api/admin/users') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            users: [
+                { username: 'artist1', role: 'user', email: 'artist1@vulnart.shop' },
+                { username: 'collector_jane', role: 'premium', email: 'jane@vulnart.shop' },
+                { username: 'artlover99', role: 'user', email: 'artlover99@vulnart.shop' },
+                { username: 'curator_mike', role: 'admin', email: 'mike@vulnart.shop' },
+                { username: 'dev_test', role: 'user', email: 'dev@vulnart.shop' },
+                { username: 'backup_admin', role: 'admin', email: 'backup@vulnart.shop' },
+            ]
+        }));
+    } else if (req.url === '/api/admin/flags') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            flags: [
+                { flag: 'FLAG{w3lcome_to_vuln_art}', tier: 'easy', points: 100 },
+                { flag: 'FLAG{r0b0ts_txt_g0ldm1ne}', tier: 'easy', points: 150 },
+                { flag: 'FLAG{d33p_n3st3d_f1l3s_w1n}', tier: 'medium', points: 300 },
+                { flag: 'FLAG{adm1n_c00k1e_h4ck}', tier: 'medium', points: 250 },
+                { flag: 'FLAG{vh0st_3num3r4t10n_w1n}', tier: 'hard', points: 400 },
+                { flag: 'FLAG{m4st3r_0f_vuln}', tier: 'expert', points: 1000 },
+            ]
+        }));
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+    }
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Admin VHOST running on port ${PORT}`);
+});
+EOF
+
+EXPOSE 3001
+
+CMD ["node", "server.js"]

@@ -1,0 +1,6 @@
+{
+  "level": 5,
+  "message": "You found the JSON file!",
+  "hint": "The credentials.csv file in /secret-files/ contains plaintext passwords for all test accounts including admins.",
+  "nextLevel": "Continue to level 6..."
+}

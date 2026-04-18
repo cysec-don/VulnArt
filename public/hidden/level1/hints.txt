@@ -1,0 +1,19 @@
+Level 1 Hints
+=============
+
+Welcome, curious explorer! You've found the hidden directory structure.
+
+Each level goes deeper. Can you reach level 10?
+
+Hints for other vulnerabilities:
+- Check the page source of the home page for a flag
+- robots.txt reveals hidden paths
+- The .env file at the root contains secrets
+- The admin panel is hidden at a path mentioned in robots.txt
+- Try updating your user profile with { "role": "admin" }
+- The auction bid endpoint doesn't validate minimum bids
+- The rental endpoint accepts any number of days
+- Debug endpoint: /api/debug/env
+- Internal stats: /api/internal/stats
+
+Keep going deeper... level 2 awaits!

@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin-panel-x7k9/
+Disallow: /api/admin/
+Disallow: /api/internal/
+Disallow: /api/debug/
+Disallow: /hidden/
+Disallow: /secret-files/
+Disallow: /backup/
+Disallow: /.env

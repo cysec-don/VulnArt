@@ -1,0 +1,7 @@
+Level 7
+=======
+
+Interesting fact: The search API v2 at /api/v2/search?q= has error handling
+that leaks table schema information when special characters are used.
+
+Try searching with characters like ' or " to trigger the debug info.

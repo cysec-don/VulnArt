@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  name          String?
+  bio           String?
+  avatar        String?
+  role          String    @default("user") // user, premium, admin
+  balance       Float     @default(10000.0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  purchases     Purchase[]
+  rentals       Rental[]
+  bids          Bid[]
+  sessions      Session[]
+  flagSubmissions FlagSubmission[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Artwork {
+  id          String   @id @default(cuid())
+  title       String
+  artist      String
+  description String
+  category    String   // classical, modern, cyberpunk, abstract, realistic
+  price       Float
+  rentPrice   Float    // per day
+  image       String
+  isForSale   Boolean  @default(true)
+  isForRent   Boolean  @default(true)
+  isForAuction Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchases   Purchase[]
+  rentals     Rental[]
+  auctions    Auction[]
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artworkId String
+  artwork   Artwork  @relation(fields: [artworkId], references: [id])
+  amount    Float
+  createdAt DateTime @default(now())
+}
+
+model Rental {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artworkId String
+  artwork   Artwork  @relation(fields: [artworkId], references: [id])
+  amount    Float
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Auction {
+  id          String   @id @default(cuid())
+  artworkId   String
+  artwork     Artwork  @relation(fields: [artworkId], references: [id])
+  startPrice  Float
+  currentPrice Float
+  minBid      Float
+  startTime   DateTime
+  endTime     DateTime
+  isActive    Boolean  @default(true)
+  winnerId    String?
+  createdAt   DateTime @default(now())
+
+  bids        Bid[]
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auctionId String
+  auction   Auction  @relation(fields: [auctionId], references: [id])
+  amount    Float
+  createdAt DateTime @default(now())
+}
+
+model FlagSubmission {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flag      String
+  tier      String   // easy, medium, hard, expert
+  points    Int
+  createdAt DateTime @default(now())
+}
+
+model HiddenLog {
+  id        String   @id @default(cuid())
+  eventType String
+  message   String
+  metadata  String?
+  createdAt DateTime @default(now())
+}

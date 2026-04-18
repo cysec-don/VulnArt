@@ -1,0 +1,10 @@
+Level 9 - One more to go!
+=========================
+
+The master flag is hidden in the admin panel at /admin-panel-x7k9
+
+To access it, you need admin privileges. You can get them by:
+1. Using the curator_mike credentials (found in comments, notes, and credentials.csv)
+2. Or exploiting the role change vulnerability in the profile update endpoint
+
+Once you have admin access, the master flag will be revealed.

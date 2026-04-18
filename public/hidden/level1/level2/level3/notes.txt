@@ -1,0 +1,7 @@
+Level 3 - Deeper still
+======================
+
+Did you know the artwork detail endpoint returns internal notes?
+Try /api/artworks/[any-artwork-id]
+
+The internal notes contain reserve prices and other admin-only data.
