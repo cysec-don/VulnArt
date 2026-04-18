@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/auth-store';
 import { toast } from 'sonner';
+import Image from 'next/image';
 import {
   ShoppingBag,
   Clock,
@@ -40,6 +41,7 @@ export default function ArtworkDetailPage() {
   const [isBuying, setIsBuying] = useState(false);
   const [isRenting, setIsRenting] = useState(false);
   const [isBidding, setIsBidding] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -203,11 +205,23 @@ export default function ArtworkDetailPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className={`aspect-[4/3] bg-gradient-to-br ${colorClass} rounded-xl flex items-center justify-center`}>
-            <div className="text-center p-8">
-              <p className="text-2xl font-semibold opacity-80">{artwork.title}</p>
-              <p className="text-lg opacity-60 mt-2">by {artwork.artist}</p>
-            </div>
+          <div className={`aspect-[4/3] bg-gradient-to-br ${colorClass} rounded-xl flex items-center justify-center overflow-hidden relative`}>
+            {artwork.image && !imgError ? (
+              <Image
+                src={artwork.image}
+                alt={artwork.title}
+                fill
+                className="object-cover rounded-xl"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                priority
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="text-center p-8">
+                <p className="text-2xl font-semibold opacity-80">{artwork.title}</p>
+                <p className="text-lg opacity-60 mt-2">by {artwork.artist}</p>
+              </div>
+            )}
           </div>
         </motion.div>
 

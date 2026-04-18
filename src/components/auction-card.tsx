@@ -1,11 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Gavel, Clock, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
 
 interface AuctionCardProps {
   auction: {
@@ -21,6 +22,7 @@ interface AuctionCardProps {
       artist: string;
       category: string;
       price: number;
+      image?: string;
     };
     bids: {
       amount: number;
@@ -43,7 +45,7 @@ const categoryColors: Record<string, string> = {
 function CountdownTimer({ endTime }: { endTime: string }) {
   const [timeLeft, setTimeLeft] = useState('');
 
-  useState(() => {
+  useEffect(() => {
     const update = () => {
       const end = new Date(endTime).getTime();
       const now = Date.now();
@@ -69,7 +71,7 @@ function CountdownTimer({ endTime }: { endTime: string }) {
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  });
+  }, [endTime]);
 
   return (
     <div className="flex items-center gap-1.5 text-sm">
@@ -82,7 +84,9 @@ function CountdownTimer({ endTime }: { endTime: string }) {
 export function AuctionCard({ auction, onBid, userBalance }: AuctionCardProps) {
   const [bidAmount, setBidAmount] = useState('');
   const [isBidding, setIsBidding] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const colorClass = categoryColors[auction.artwork.category] || categoryColors.abstract;
+  const hasImage = auction.artwork.image && !imgError;
 
   const handleBid = async () => {
     if (!onBid || !bidAmount) return;
@@ -103,11 +107,22 @@ export function AuctionCard({ auction, onBid, userBalance }: AuctionCardProps) {
       animate={{ opacity: 1, y: 0 }}
     >
       <Card className="overflow-hidden border-border/50 transition-all hover:shadow-lg hover:shadow-amber-500/5">
-        <div className={`aspect-[2/1] bg-gradient-to-br ${colorClass} flex items-center justify-center`}>
-          <div className="text-center p-4">
-            <p className="text-lg font-semibold opacity-80">{auction.artwork.title}</p>
-            <p className="text-sm opacity-60">by {auction.artwork.artist}</p>
-          </div>
+        <div className={`aspect-[2/1] bg-gradient-to-br ${colorClass} flex items-center justify-center overflow-hidden relative`}>
+          {hasImage ? (
+            <Image
+              src={auction.artwork.image!}
+              alt={auction.artwork.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="text-center p-4">
+              <p className="text-lg font-semibold opacity-80">{auction.artwork.title}</p>
+              <p className="text-sm opacity-60">by {auction.artwork.artist}</p>
+            </div>
+          )}
         </div>
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center justify-between">

@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +32,7 @@ interface ArtworkCardProps {
     category: string;
     price: number;
     rentPrice: number;
+    image?: string;
     isForAuction: boolean;
     auctions?: { currentPrice: number }[];
   };
@@ -40,6 +43,9 @@ export function ArtworkCard({ artwork, index = 0 }: ArtworkCardProps) {
   const colorClass = categoryColors[artwork.category] || categoryColors.abstract;
   const accentClass = categoryAccent[artwork.category] || categoryAccent.abstract;
   const auctionPrice = artwork.auctions?.[0]?.currentPrice;
+  const [imgError, setImgError] = useState(false);
+
+  const hasImage = artwork.image && !imgError;
 
   return (
     <motion.div
@@ -50,16 +56,27 @@ export function ArtworkCard({ artwork, index = 0 }: ArtworkCardProps) {
       <Link href={`/artwork/${artwork.id}`}>
         <Card className="group overflow-hidden border-border/50 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5 hover:-translate-y-1 cursor-pointer">
           <div className={`relative aspect-[4/3] bg-gradient-to-br ${colorClass} flex items-center justify-center overflow-hidden`}>
-            <div className="text-center p-6 transition-transform duration-300 group-hover:scale-105">
-              <p className={`text-lg font-semibold ${accentClass} opacity-80`}>
-                {artwork.title}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1 opacity-60">
-                by {artwork.artist}
-              </p>
-            </div>
+            {hasImage ? (
+              <Image
+                src={artwork.image!}
+                alt={artwork.title}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="text-center p-6 transition-transform duration-300 group-hover:scale-105">
+                <p className={`text-lg font-semibold ${accentClass} opacity-80`}>
+                  {artwork.title}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1 opacity-60">
+                  by {artwork.artist}
+                </p>
+              </div>
+            )}
             {artwork.isForAuction && (
-              <div className="absolute top-3 right-3">
+              <div className="absolute top-3 right-3 z-10">
                 <Badge className="bg-amber-600 text-white hover:bg-amber-700 shadow-lg">
                   <Gavel className="h-3 w-3 mr-1" />
                   Auction
@@ -80,7 +97,7 @@ export function ArtworkCard({ artwork, index = 0 }: ArtworkCardProps) {
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
               {artwork.isForAuction && auctionPrice ? (
                 <div>
-                  <p className="text-[10px] text-muted-uppercase uppercase tracking-wider">Current Bid</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Current Bid</p>
                   <p className="text-sm font-bold text-amber-600">${auctionPrice.toLocaleString()}</p>
                 </div>
               ) : (

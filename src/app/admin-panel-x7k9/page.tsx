@@ -75,7 +75,7 @@ export default function AdminPanelPage() {
           <Shield className="h-8 w-8 text-amber-600" />
           <h1 className="text-3xl font-bold">Admin Panel</h1>
           <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-            FLAG{h1dd3n_4dm1n_p4n3l}
+            {'FLAG{h1dd3n_4dm1n_p4n3l}'}
           </Badge>
         </div>
         <p className="text-muted-foreground">
