@@ -40,7 +40,7 @@ The platform is designed to teach cybersecurity concepts through **realistic, ha
 
 ## ⚠️ Disclaimer
 
-> **This platform is designed exclusively for educational and authorized cybersecurity training purposes.** All vulnerabilities are intentionally placed in an isolated, containerized environment. Do NOT apply techniques learned here against systems you do not own or have explicit authorization to test. The creator, Cysec Don, assumes no liability for misuse of this training material.
+> **This platform is designed exclusively for educational and authorized cybersecurity training purposes.** All vulnerabilities are intentionally placed in an isolated environment. Do NOT apply techniques learned here against systems you do not own or have explicit authorization to test. The creator, Cysec Don, assumes no liability for misuse of this training material.
 
 ---
 
@@ -90,32 +90,116 @@ The platform is designed to teach cybersecurity concepts through **realistic, ha
 | Frontend | Next.js 16, React 19, TypeScript 5 |
 | Styling | Tailwind CSS 4, shadcn/ui, Framer Motion |
 | Backend | Next.js API Routes, Prisma ORM |
-| Database | SQLite (dev) / PostgreSQL (production Docker) |
+| Database | SQLite (default) / PostgreSQL (optional) |
 | Auth | Session-based with httpOnly cookies |
-| Proxy | Nginx with virtual host routing |
-| Deployment | Docker Compose (multi-container) |
+| Proxy | Nginx with virtual host routing (optional) |
+| Runtime | Node.js 20+ or Bun |
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Installation
 
-### Prerequisites
+Vuln Art Shop can be installed directly on your system or deployed with Docker. **Direct installation is the recommended method** — Docker is provided as an alternative for containerized environments.
 
-- **Docker** (v20.10+) and **Docker Compose** (v2.0+)
-- **4GB RAM** minimum (8GB recommended)
-- **10GB disk space**
-- Modern web browser (Chrome/Firefox)
+### Method 1: Direct Install (Recommended)
 
-### Step 1: Clone the Repository
+This is the simplest and fastest way to get Vuln Art Shop running on your machine.
+
+#### Prerequisites
+
+| Requirement | Version | Install |
+|-------------|---------|---------|
+| **Node.js** | 20+ | [nodejs.org](https://nodejs.org) or `nvm install 20` |
+| **Bun** (recommended) | Latest | `curl -fsSL https://bun.sh/install \| bash` |
+| **npm** (alternative) | 9+ | Comes with Node.js |
+| **Git** | Latest | `apt install git` or [git-scm.com](https://git-scm.com) |
+
+#### Step 1: Clone & Install
 
 ```bash
 git clone https://github.com/cysec-don/VulnArt.git
 cd VulnArt
+
+# Install dependencies (use bun for speed, or npm)
+bun install
+# — or —
+npm install
 ```
 
-### Step 2: Configure Hosts File
+#### Step 2: Set Up the Database
 
-Edit your `/etc/hosts` file (Linux/macOS) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
+```bash
+# Generate Prisma client and create the database
+bun run db:push
+# — or —
+npx prisma db push
+
+# Seed the database with 50 artworks and test accounts
+bunx prisma db seed
+# — or —
+npx prisma db seed
+```
+
+#### Step 3: Start the Server
+
+```bash
+# Development mode (hot reload)
+bun run dev
+# — or —
+npm run dev
+
+# Production mode
+bun run build && bun run start
+# — or —
+npm run build && npm run start
+```
+
+#### Step 4: Access the Platform
+
+Open your browser and navigate to:
+
+| URL | Description |
+|-----|-------------|
+| **http://localhost:3000** | Main art marketplace |
+| http://localhost:3000/admin-panel-x7k9 | Hidden admin panel |
+| http://localhost:3000/robots.txt | robots.txt (CTF entry point) |
+
+#### Step 5: Start Exploring!
+
+1. Register an account or log in with: `artist1` / `password123`
+2. Begin your CTF journey by inspecting the page source 👀
+
+> 💡 **Tip**: The core CTF experience (15 out of 18 flags) works perfectly on `localhost:3000` without any additional setup. The remaining 3 flags require virtual host configuration (see below).
+
+---
+
+### Method 2: Docker Install (Alternative)
+
+Docker provides a containerized deployment with full virtual host support out of the box. Use this method if you want the complete multi-container experience with Nginx and vhost routing.
+
+#### Prerequisites
+
+| Requirement | Version |
+|-------------|---------|
+| **Docker** | v20.10+ |
+| **Docker Compose** | v2.0+ |
+| **RAM** | 4GB minimum (8GB recommended) |
+| **Disk Space** | 10GB |
+
+#### Step 1: Clone & Deploy
+
+```bash
+git clone https://github.com/cysec-don/VulnArt.git
+cd VulnArt
+
+# Build and start all containers
+cd docker
+docker-compose up -d --build
+```
+
+#### Step 2: Configure Hosts File
+
+Edit `/etc/hosts` (Linux/macOS) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
 
 ```
 # Vuln Art Shop CTF Lab
@@ -126,16 +210,79 @@ Edit your `/etc/hosts` file (Linux/macOS) or `C:\Windows\System32\drivers\etc\ho
 127.0.0.1  staging.vulnart.local
 ```
 
-### Step 3: Deploy with Docker
+#### Step 3: Access the Platform
+
+Wait ~30 seconds for services to initialize, then visit `http://vulnart.local`.
+
+---
+
+### Method 3: Direct Install + Virtual Hosts (Full Experience)
+
+For the complete CTF experience with all 18 flags on a bare-metal install, add Nginx as a reverse proxy for virtual host routing.
+
+#### Prerequisites (in addition to Method 1)
+
+| Requirement | Install |
+|-------------|---------|
+| **Nginx** | `sudo apt install nginx` or [nginx.org](https://nginx.org) |
+
+#### Step 1: Complete Method 1 first
+
+Follow all steps in Method 1 to get the app running on `localhost:3000`.
+
+#### Step 2: Configure Hosts File
 
 ```bash
-cd docker
-docker-compose up -d --build
+sudo nano /etc/hosts
 ```
 
-Wait approximately 30 seconds for all services to initialize.
+Add:
+```
+# Vuln Art Shop CTF Lab
+127.0.0.1  vulnart.local
+127.0.0.1  www.vulnart.local
+127.0.0.1  admin.vulnart.local
+127.0.0.1  dev.vulnart.local
+127.0.0.1  staging.vulnart.local
+```
 
-### Step 4: Access the Platform
+#### Step 3: Start the VHOST Services
+
+The virtual host services are standalone Node.js servers included in the `docker/` directory. Run them alongside the main app:
+
+```bash
+# Terminal 1: Main app (already running from Method 1)
+bun run dev
+
+# Terminal 2: Admin vhost
+node docker/Dockerfile.admin-vhost  # Extract and run the embedded server
+# — or use the standalone scripts —
+cd docker && node -e "require('fs').readFileSync('Dockerfile.admin-vhost','utf8').match(/COPY <<'EOF' ([\\s\\S]*?)EOF/)"
+```
+
+Alternatively, use the provided vhost start script:
+
+```bash
+# Start all vhost services (from project root)
+bash scripts/start-vhosts.sh
+```
+
+#### Step 4: Configure Nginx
+
+Copy the provided Nginx configuration:
+
+```bash
+# Copy Nginx configs
+sudo cp docker/nginx/nginx.conf /etc/nginx/nginx.conf
+sudo cp -r docker/nginx/conf.d /etc/nginx/conf.d
+sudo cp -r docker/nginx/vhosts /etc/nginx/vhosts
+
+# Test and restart Nginx
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+#### Step 5: Access All Services
 
 | Service | URL |
 |---------|-----|
@@ -144,15 +291,26 @@ Wait approximately 30 seconds for all services to initialize.
 | Dev VHOST | http://dev.vulnart.local |
 | Staging VHOST | http://staging.vulnart.local |
 
-### Step 5: Start Exploring!
+---
 
-1. Visit `http://vulnart.local` in your browser
-2. Register an account or use: `artist1` / `password123`
-3. Begin your CTF journey by inspecting the page source 👀
+## 📋 Installation Comparison
+
+| Feature | Direct Install | Direct + VHOSTs | Docker |
+|---------|---------------|-----------------|--------|
+| **Setup Time** | ~2 minutes | ~10 minutes | ~5 minutes |
+| **Difficulty** | Easy | Moderate | Easy |
+| **Flags Available** | 15/18 | 18/18 | 18/18 |
+| **Virtual Hosts** | ❌ | ✅ | ✅ |
+| **Resource Usage** | Low | Low-Medium | Medium-High |
+| **Best For** | Quick start, learning | Complete CTF | Classrooms, labs |
+| **Requires Docker** | ❌ | ❌ | ✅ |
+| **Requires Nginx** | ❌ | ✅ | ❌ (included) |
+
+> 💡 **Recommendation**: Start with **Method 1 (Direct Install)** to begin exploring immediately. Add virtual hosts later when you're ready for the hard-tier vhost flags.
 
 ---
 
-## 🐳 Docker Services
+## 🐳 Docker Services (Method 2 Reference)
 
 | Container | Port | Purpose |
 |-----------|------|---------|
@@ -283,6 +441,20 @@ These flags require chaining multiple vulnerabilities and discoveries together. 
 
 ## 🔄 Resetting the Lab
 
+### Direct Install
+
+```bash
+# Reset the database (clears all user data, preserves seed data)
+rm prisma/dev.db
+bun run db:push
+bunx prisma db seed
+
+# — or —
+npx prisma migrate reset --force
+```
+
+### Docker Install
+
 ```bash
 # Full reset (removes all data)
 cd docker
@@ -364,9 +536,13 @@ VulnArt/
 │           ├── admin.conf              # admin.vulnart.local
 │           ├── dev.conf                # dev.vulnart.local
 │           └── staging.conf            # staging.vulnart.local
+├── scripts/
+│   └── start-vhosts.sh                 # Start vhost services (bare-metal)
 ├── docs/
-│   ├── LAB_SETUP_GUIDE.md             # Setup instructions
-│   └── INSTRUCTOR_FLAG_GUIDE.md       # Flag reference (🔒 only)
+│   ├── INSTALL.md                      # Detailed installation guide
+│   ├── CTF_TRAINING_GUIDE.md           # Complete training guide
+│   ├── LAB_SETUP_GUIDE.md              # Lab setup for classrooms
+│   └── INSTRUCTOR_FLAG_GUIDE.md        # Flag reference (🔒 only)
 └── README.md                           # This file
 ```
 
