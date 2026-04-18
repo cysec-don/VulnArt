@@ -47,7 +47,7 @@ The platform is designed to teach cybersecurity concepts through **realistic, ha
 ## 🎯 Platform Overview
 
 ### What You See (Art Marketplace)
-- 🖼️ **50 artworks** across 5 categories: Classical, Modern, Cyberpunk, Abstract, Realistic
+- 🖼️ **60 artworks** across 6 categories: Classical, Modern, Cyberpunk, Abstract, Realistic, African
 - 💰 **Buy system** — Purchase artworks with virtual currency
 - 🕐 **Rent system** — Time-based artwork rentals
 - 🏛️ **Auction system** — Live bidding with countdown timers
@@ -134,7 +134,7 @@ bun run db:push
 # — or —
 npx prisma db push
 
-# Seed the database with 50 artworks and test accounts
+# Seed the database with 60 artworks and test accounts
 bunx prisma db seed
 # — or —
 npx prisma db seed
@@ -514,7 +514,7 @@ VulnArt/
 │   └── middleware.ts                    # Logging + info disclosure
 ├── prisma/
 │   ├── schema.prisma                   # Database models
-│   └── seed.ts                         # 50 artworks + test users
+│   └── seed.ts                         # 60 artworks + test users
 ├── public/
 │   ├── robots.txt                      # CTF: exposes hidden paths
 │   ├── .env                            # CTF: leaked environment

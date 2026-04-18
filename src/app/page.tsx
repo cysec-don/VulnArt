@@ -25,6 +25,7 @@ const categoryPreviews = [
   { name: 'Cyberpunk', slug: 'cyberpunk', description: 'Neon-lit futures', color: 'from-cyan-200 to-teal-200 dark:from-cyan-900/40 dark:to-teal-900/40', count: 10 },
   { name: 'Abstract', slug: 'abstract', description: 'Beyond the visible', color: 'from-rose-200 to-red-200 dark:from-rose-900/40 dark:to-red-900/40', count: 10 },
   { name: 'Realistic', slug: 'realistic', description: 'Hyper-real detail', color: 'from-emerald-200 to-green-200 dark:from-emerald-900/40 dark:to-green-900/40', count: 10 },
+  { name: 'African', slug: 'african', description: 'Heritage and spirit', color: 'from-yellow-200 to-red-300 dark:from-yellow-900/40 dark:to-red-900/40', count: 10 },
 ];
 
 export default function HomePage() {
@@ -127,9 +128,9 @@ export default function HomePage() {
             className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 max-w-3xl mx-auto"
           >
             {[
-              { icon: Palette, label: 'Artworks', value: '50+' },
+              { icon: Palette, label: 'Artworks', value: '60+' },
               { icon: ShoppingBag, label: 'Collectors', value: '1.2K' },
-              { icon: Gavel, label: 'Auctions', value: '4 Live' },
+              { icon: Gavel, label: 'Auctions', value: '5 Live' },
               { icon: TrendingUp, label: 'Volume', value: '$2.4M' },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
@@ -152,11 +153,11 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3">Browse by Category</h2>
             <p className="text-muted-foreground text-lg">
-              Explore our curated collections across five distinct styles
+              Explore our curated collections across six distinct styles
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {categoryPreviews.map((cat, index) => (
               <motion.div
                 key={cat.slug}

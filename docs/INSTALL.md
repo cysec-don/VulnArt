@@ -90,7 +90,7 @@ npm install
 # Create database schema and generate Prisma client
 bun run db:push
 
-# Seed the database with 50 artworks and 6 test accounts
+# Seed the database with 60 artworks and 6 test accounts
 bunx prisma db seed
 ```
 
@@ -337,7 +337,7 @@ curl -s http://localhost:3000/api/artworks | head -c 100
 
 # Are artworks seeded?
 curl -s http://localhost:3000/api/artworks | jq '.artworks | length'
-# Expected: 50
+# Expected: 60
 
 # Is the database working?
 curl -s http://localhost:3000/api/internal/stats | jq '.stats'

@@ -15,6 +15,7 @@ const categories = [
   { slug: 'cyberpunk', label: 'Cyberpunk' },
   { slug: 'abstract', label: 'Abstract' },
   { slug: 'realistic', label: 'Realistic' },
+  { slug: 'african', label: 'African' },
 ];
 
 function GalleryContent() {
@@ -36,7 +37,7 @@ function GalleryContent() {
       const params = new URLSearchParams();
       if (category !== 'all') params.set('category', category);
       if (search) params.set('search', search);
-      params.set('limit', '50');
+      params.set('limit', '60');
 
       const res = await fetch(`/api/artworks?${params}`);
       if (res.ok) {

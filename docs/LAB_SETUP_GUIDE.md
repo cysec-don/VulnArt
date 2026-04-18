@@ -240,7 +240,7 @@ curl -I http://staging.vulnart.local
 ### Full Checklist
 
 - [ ] Home page loads (localhost:3000 or vulnart.local)
-- [ ] Gallery shows 50 artworks
+- [ ] Gallery shows 60 artworks
 - [ ] Registration and login work
 - [ ] robots.txt accessible
 - [ ] Hidden .env file accessible

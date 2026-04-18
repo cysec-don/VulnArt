@@ -14,6 +14,7 @@ const categoryColors: Record<string, string> = {
   cyberpunk: 'from-cyan-200 to-teal-200 dark:from-cyan-900/40 dark:to-teal-900/40',
   abstract: 'from-rose-200 to-red-200 dark:from-rose-900/40 dark:to-red-900/40',
   realistic: 'from-emerald-200 to-green-200 dark:from-emerald-900/40 dark:to-green-900/40',
+  african: 'from-yellow-200 to-red-300 dark:from-yellow-900/40 dark:to-red-900/40',
 };
 
 const categoryAccent: Record<string, string> = {
@@ -22,6 +23,7 @@ const categoryAccent: Record<string, string> = {
   cyberpunk: 'text-cyan-700 dark:text-cyan-300',
   abstract: 'text-rose-700 dark:text-rose-300',
   realistic: 'text-emerald-700 dark:text-emerald-300',
+  african: 'text-yellow-700 dark:text-yellow-300',
 };
 
 interface ArtworkCardProps {

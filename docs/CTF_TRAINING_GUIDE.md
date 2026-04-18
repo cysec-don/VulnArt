@@ -40,7 +40,7 @@ Vuln Art Shop operates on two distinct levels:
 
 On the surface, Vuln Art Shop is a fully functional art marketplace with:
 
-- **50 artworks** across five categories (Classical, Modern, Cyberpunk, Abstract, Realistic)
+- **60 artworks** across six categories (Classical, Modern, Cyberpunk, Abstract, Realistic, African)
 - **Purchase system** — Buy artworks with virtual currency
 - **Rental system** — Rent artworks by the day
 - **Auction system** — Live bidding with countdown timers

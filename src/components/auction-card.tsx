@@ -40,6 +40,7 @@ const categoryColors: Record<string, string> = {
   cyberpunk: 'from-cyan-200 to-teal-200 dark:from-cyan-900/40 dark:to-teal-900/40',
   abstract: 'from-rose-200 to-red-200 dark:from-rose-900/40 dark:to-red-900/40',
   realistic: 'from-emerald-200 to-green-200 dark:from-emerald-900/40 dark:to-green-900/40',
+  african: 'from-yellow-200 to-red-300 dark:from-yellow-900/40 dark:to-red-900/40',
 };
 
 function CountdownTimer({ endTime }: { endTime: string }) {

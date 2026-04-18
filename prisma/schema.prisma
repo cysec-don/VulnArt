@@ -41,7 +41,7 @@ model Artwork {
   title       String
   artist      String
   description String
-  category    String   // classical, modern, cyberpunk, abstract, realistic
+  category    String   // classical, modern, cyberpunk, abstract, realistic, african
   price       Float
   rentPrice   Float    // per day
   image       String
