@@ -370,7 +370,7 @@ curl -s http://localhost:3000/api/internal/stats | jq '.stats'
 
 ```bash
 # Full database reset
-rm -f prisma/dev.db
+rm -f db/custom.db
 bun run db:push
 bunx prisma db seed
 
@@ -423,7 +423,7 @@ nvm install 20
 
 ```bash
 # Reset the database completely
-rm -f prisma/dev.db
+rm -f db/custom.db
 bun run db:push
 
 # Run seed manually

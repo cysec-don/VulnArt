@@ -221,7 +221,7 @@ ipconfig /flushdns
 ```bash
 # Is the server running?
 curl -s http://localhost:3000/api/artworks | jq '.artworks | length'
-# Expected: 50
+# Expected: 60
 
 # Can you access the main page?
 curl -s http://localhost:3000 | head -20
@@ -257,7 +257,7 @@ curl -I http://staging.vulnart.local
 
 ```bash
 # Reset the database
-rm -f prisma/dev.db
+rm -f db/custom.db
 bun run db:push
 bunx prisma db seed
 
@@ -327,7 +327,7 @@ docker-compose down -v && docker-compose up -d --build  # Full rebuild
 
 ### Database seed fails
 ```bash
-rm -f prisma/dev.db
+rm -f db/custom.db
 bun run db:push
 bunx tsx prisma/seed.ts          # Run seed manually
 ```

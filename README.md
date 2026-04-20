@@ -444,8 +444,8 @@ These flags require chaining multiple vulnerabilities and discoveries together. 
 ### Direct Install
 
 ```bash
-# Reset the database (clears all user data, preserves seed data)
-rm prisma/dev.db
+# Reset the database (clears all user data, restores seed data)
+rm db/custom.db
 bun run db:push
 bunx prisma db seed
 
@@ -511,7 +511,7 @@ VulnArt/
 │   │   └── utils.ts                    # Utility functions
 │   ├── store/
 │   │   └── auth-store.ts               # Zustand auth state
-│   └── middleware.ts                    # Logging + info disclosure
+│   └── proxy.ts                       # Proxy (middleware) + info disclosure headers
 ├── prisma/
 │   ├── schema.prisma                   # Database models
 │   └── seed.ts                         # 60 artworks + test users

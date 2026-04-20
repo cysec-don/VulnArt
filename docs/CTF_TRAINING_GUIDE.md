@@ -657,7 +657,7 @@ When approaching any web application for security testing, follow this methodolo
 
 ```bash
 # Direct install: full lab reset (clears all student data)
-rm -f prisma/dev.db && bun run db:push && bunx prisma db seed
+rm -f db/custom.db && bun run db:push && bunx prisma db seed
 
 # Docker: full lab reset
 cd docker && docker-compose down -v && docker-compose up -d --build
@@ -671,7 +671,7 @@ cd docker && docker-compose down -v && docker-compose up -d --build
 
 ```bash
 # Reset the database (clears all user data)
-rm -f prisma/dev.db
+rm -f db/custom.db
 bun run db:push
 bunx prisma db seed
 
@@ -697,7 +697,7 @@ docker-compose up -d --build
 | Port 80 in use | Stop Apache/Nginx: `sudo systemctl stop apache2` |
 | Can't access vhosts | Verify `/etc/hosts` entries, flush DNS cache |
 | 502 Bad Gateway | Wait for web container to fully start (30s) |
-| Database errors | Reset: `rm -f prisma/dev.db && bun run db:push && bunx prisma db seed` |
+| Database errors | Reset: `rm -f db/custom.db && bun run db:push && bunx prisma db seed` |
 | Missing artworks | Re-seed: `bunx prisma db seed` or `bunx tsx prisma/seed.ts` |
 | Seed fails | `bunx tsx prisma/seed.ts` (run manually) |
 | Nginx won't start | `sudo nginx -t` to test config |
