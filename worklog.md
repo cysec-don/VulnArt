@@ -62,3 +62,29 @@ Stage Summary:
 - Virtual host system simulating admin.vulnart.local, dev.vulnart.local, staging.vulnart.local
 - Each vhost has unique CTF flags and content
 - Complete documentation for lab setup and flag reference
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix test credentials not working, add African category, update docs, push to GitHub
+
+Work Log:
+- Investigated login failure: database was empty (no users seeded)
+- Reseeded database with 6 users and 60 artworks (including African category)
+- Verified all 6 test accounts work: artist1, collector_jane, artlover99, curator_mike, dev_test, backup_admin
+- Fixed production server crash: removed output:standalone from next.config.ts
+- Renamed middleware.ts -> proxy.ts (Next.js 16 convention)
+- Reduced Prisma logging to prevent OOM crashes
+- Fixed database path references in docs (db/custom.db not prisma/dev.db)
+- Verified 60 unique artworks across 6 categories with no duplicates
+- Verified all 60 image files exist in public/images/
+- Updated all documentation (README.md, LAB_SETUP_GUIDE.md, CTF_TRAINING_GUIDE.md, INSTRUCTOR_FLAG_GUIDE.md, INSTALL.md)
+- Pushed all changes to GitHub: https://github.com/cysec-don/VulnArt
+
+Stage Summary:
+- Root cause of login failure: database was not seeded during installation
+- All 6 test credentials now work correctly after reseeding
+- African art category added with 10 unique artworks
+- Total: 60 artworks across 6 categories (Classical, Modern, Cyberpunk, Abstract, Realistic, African)
+- Server stability improved by removing standalone output mode and reducing logging
+- Documentation updated with correct DB paths and artwork counts
+- GitHub repo updated with all fixes
