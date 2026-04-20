@@ -88,3 +88,42 @@ Stage Summary:
 - Server stability improved by removing standalone output mode and reducing logging
 - Documentation updated with correct DB paths and artwork counts
 - GitHub repo updated with all fixes
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Verify SQL injection vulnerabilities and update README
+
+Work Log:
+- Audited all API routes for SQL injection - found that the previous "SQL injection" was FAKE
+- The /api/v2/search used safe Prisma findMany with parameterized queries - not injectable
+- The FLAG{sql_qu3ry_m4st3r} was just given away in an unreachable error handler
+- Replaced /api/v2/search with real SQL injection using $queryRawUnsafe
+  - UNION-based injection extracts data from any table (HiddenLog, User, etc.)
+  - Error-based disclosure leaks table names, column names, database type
+  - Flag only awarded when actual SQL injection extracts flag data
+- Added SQL injection to /api/auth/login for authentication bypass
+  - Classic comment injection (admin'--) bypasses password check
+  - Tautology (' OR '1'='1'--) returns first user
+  - Error disclosure reveals User table schema on malformed SQL
+- Updated README.md with comprehensive SQL injection documentation section
+  - Exploitation examples with curl
+  - Attack chain diagram
+  - sqlmap automation commands
+  - Database schema reference
+- Updated CTF_TRAINING_GUIDE.md with SQL injection category
+  - New section: SQL Injection vulnerability type with test commands
+  - Types table (error-based, UNION-based, auth bypass, tautology)
+  - Added SQL injection skills to Advanced Skills section
+- Updated INSTRUCTOR_FLAG_GUIDE.md with real exploitation steps for Flag 13
+  - Detailed UNION injection payload examples
+  - Login auth bypass instructions
+  - sqlmap automation commands
+- Committed all changes locally
+- GitHub push requires re-authentication (token expired)
+
+Stage Summary:
+- Vuln Art Shop now has REAL SQL injection vulnerabilities (not simulated)
+- Two injection points: /api/v2/search (UNION-based) and /api/auth/login (auth bypass)
+- All documentation updated with real exploitation instructions
+- Changes committed locally, need to push to GitHub with fresh credentials
